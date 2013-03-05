@@ -7,10 +7,14 @@
 #ifndef BOARD_H_
 #define BOARD_H_
 
+#include <stdint.h>
+
+typedef uint8_t cell_t;
+
 struct Board {
     int width;
     int height;
-    int** cells;
+    cell_t** cells;
 };
 
 int initialize_board(struct Board* board);

@@ -79,15 +79,21 @@ int parse_input(long* iterations, struct Board* board)
     }
 
     int i, j;
+    char* sub_line;
     for (i = 0; i < board->height; ++i) {
-        while ((line == 0) || (line[0] != '#')) getline(&line, &size, stdin);
-        for (j = 0; j < board->width; ++j)
-            sscanf(line, "%d", &(board->cells[i][j]));
+        while ((line == 0) || (line[0] == '#')) getline(&line, &size, stdin);
+        sub_line = line;
+        for (j = 0; j < board->width; ++j){
+            char value;
+            sscanf(sub_line, "%c", &value);
+            board->cells[i][j] = value == ' ' ? (cell_t)0 : (cell_t)1;
+            sub_line += 1; // one character
+        }
         free(line); line = 0;
     }
 
     free(line);
-    return -1;
+    return 0;
 }
 
 int main(int argc, char** argv)
@@ -103,7 +109,7 @@ int main(int argc, char** argv)
                 "cell_0_0 cell_0_1 ... cell_0_width-1\n\t"
                 "cell_1_0 cell_1_1 ... cell_1_width-1\n\t...\n\t"
                 "cell_height-1_0 cell_height-1_1 ... cell_height-1_width-1\n"
-                "where cell_x_y is 0 (dead) or 1 (alive).\nExiting.\n");
+                "where cell_x_y is ' ' (dead) or 'X' (alive).\nExiting.\n");
         return EXIT_FAILURE;
     }
 
