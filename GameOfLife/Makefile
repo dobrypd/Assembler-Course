@@ -37,7 +37,7 @@ $(OBJECTS_A): $(BIN)/%.o : $(SRC)/kernel/%.asm
 	$(NASM) $(NASM_FLAGS) $< -o $@
 
 test: all
-	cd $(SCRIPTS); ./test_runner.sh
+	./$(SCRIPTS)/test_runner.sh
 	cd $(ROOT)
 
 
