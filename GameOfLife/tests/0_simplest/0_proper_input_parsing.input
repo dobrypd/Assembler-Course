@@ -2,7 +2,7 @@
 # First: size of board (widthxheight)
 2 2
 # Second: number of iterations
-2
+0
 # Third: cells.
 # First row <dead,alive>
  X

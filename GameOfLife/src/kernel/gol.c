@@ -11,11 +11,6 @@
 #include "game.h"
 #include "printer.h"
 
-#ifndef NDEBUG
-    const int debug=1;
-#else
-    const int debug=0;
-#endif
 
 void show_help(char* prog_name)
 {
@@ -70,8 +65,10 @@ int parse_input(long* iterations, struct Board* board)
     sscanf(line, "%ld", iterations);
     free(line); line = 0;
 
-    if (debug) fprintf(stderr, "Iterations: %ld, board size: %d x %d\n",
+#ifndef NDEBUG
+    fprintf(stderr, "Iterations: %ld, board size: %d x %d\n",
             *iterations, board->width, board->height);
+#endif
 
     if (initialize_board(board)) {
         printf("Cannot initialize board, exiting.\n");
@@ -113,14 +110,18 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    if (debug) fprintf(stderr, "Starting game.\n");
     start_game(&board, iterations, ((args.summarize != 0) ? 0 : &print_board));
     if (args.summarize) print_board(&board);
 
     if (free_board(&board)) {
-        if (debug) fprintf(stderr, "Cannot free board.\n");
+#ifndef NDEBUG
+        fprintf(stderr, "Cannot free board.\n");
+#endif
         return EXIT_FAILURE;
     }
 
+#ifndef NDEBUG
+    fprintf(stderr, "Exiting with success!\n");
+#endif
     return EXIT_SUCCESS;
 }
