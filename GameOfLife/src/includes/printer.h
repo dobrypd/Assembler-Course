@@ -7,7 +7,7 @@
 #ifndef PRINTER_H_
 #define PRINTER_H_
 
-#incldue "board.h"
+#include "board.h"
 
 void print_board(struct Board* board);
 

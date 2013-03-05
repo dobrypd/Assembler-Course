@@ -6,7 +6,7 @@
 echo "Run only using make (in root directory)."
 
 # FLAG, if you dont want program outputs
-DELETE_OUTPUTS=0
+DELETE_OUTPUTS=1
 # FLAG, if want gol to show debug informations
 DEBUG_OUT=0
 

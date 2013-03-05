@@ -15,5 +15,7 @@ struct Board {
 
 int initialize_board(struct Board* board);
 
+int free_board(struct Board* board);
+
 
 #endif /* BOARD_H_ */

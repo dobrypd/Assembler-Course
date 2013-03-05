@@ -4,4 +4,10 @@
  *
  */
 
+#include "printer.h"
+#include "board.h"
 
+void print_board(struct Board* board)
+{
+
+}

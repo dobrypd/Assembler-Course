@@ -1,9 +1,11 @@
 # this is comment
 # First: size of board (2x2)
 2 2
+# Second: number of iterations
+2
+# Third: cells.
 # First row <dead,alive>
 0 1
 # Second row: <alive, alive>
 1 1
-0
 

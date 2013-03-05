@@ -58,7 +58,36 @@ void parse_args(struct Arguments* args, int argc, char** argv)
 
 int parse_input(long* iterations, struct Board* board)
 {
-    return 0;
+    *iterations = 0;
+
+    char* line = 0;
+    size_t size = 0;
+
+    while ((line == 0) || (line[0] == '#')) getline(&line, &size, stdin);
+    sscanf(line, "%d %d", &(board->width), &(board->height));
+    free(line); line = 0;
+    while ((line == 0) || (line[0] == '#')) getline(&line, &size, stdin);
+    sscanf(line, "%ld", iterations);
+    free(line); line = 0;
+
+    if (debug) fprintf(stderr, "Iterations: %ld, board size: %d x %d\n",
+            *iterations, board->width, board->height);
+
+    if (initialize_board(board)) {
+        printf("Cannot initialize board, exiting.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    int i, j;
+    for (i = 0; i < board->height; ++i) {
+        while ((line == 0) || (line[0] != '#')) getline(&line, &size, stdin);
+        for (j = 0; j < board->width; ++j)
+            sscanf(line, "%d", &(board->cells[i][j]));
+        free(line); line = 0;
+    }
+
+    free(line);
+    return -1;
 }
 
 int main(int argc, char** argv)
@@ -69,23 +98,23 @@ int main(int argc, char** argv)
     struct Board board;
     long iterations;
 
-    if (parse_input(&iterations, &board))
-        printf("Input error.\nInput schema:\n"
-                "width height\n"
-                "cell_0_0 cell_0_1 ... cell_0_width-1\n"
-                "cell_1_0 cell_1_1 ... cell_1_width-1\n"
-                "...\n"
+    if (parse_input(&iterations, &board)) {
+        printf("Input error.\nInput schema:\n\twidth height\n\t"
+                "cell_0_0 cell_0_1 ... cell_0_width-1\n\t"
+                "cell_1_0 cell_1_1 ... cell_1_width-1\n\t...\n\t"
                 "cell_height-1_0 cell_height-1_1 ... cell_height-1_width-1\n"
-                "where cell_x_y is 0 (dead) or 1 (alive)\n");
+                "where cell_x_y is 0 (dead) or 1 (alive).\nExiting.\n");
+        return EXIT_FAILURE;
+    }
 
-    initialize_board(&board);
+    if (debug) fprintf(stderr, "Starting game.\n");
+    start_game(&board, iterations, ((args.summarize != 0) ? 0 : &print_board));
+    if (args.summarize) print_board(&board);
 
-    start_game(&board, iterations, ((args->summarize != 0) ? 0 : &print_board));
-
-    if (args->summarize)
-        print_board(&board);
-
-    free_board(&board);
+    if (free_board(&board)) {
+        if (debug) fprintf(stderr, "Cannot free board.\n");
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }
