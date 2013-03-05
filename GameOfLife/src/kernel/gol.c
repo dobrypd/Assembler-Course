@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "board.h"
 #include "game.h"
+#include "printer.h"
 
 #ifndef NDEBUG
     const int debug=1;
@@ -54,13 +56,36 @@ void parse_args(struct Arguments* args, int argc, char** argv)
     }
 }
 
-//int parse_input(Board* board);
+int parse_input(long* iterations, struct Board* board)
+{
+    return 0;
+}
 
 int main(int argc, char** argv)
 {
     struct Arguments args;
     parse_args(&args, argc, argv);
-    //parse_input(state);
-    //init_board(state);
+
+    struct Board board;
+    long iterations;
+
+    if (parse_input(&iterations, &board))
+        printf("Input error.\nInput schema:\n"
+                "width height\n"
+                "cell_0_0 cell_0_1 ... cell_0_width-1\n"
+                "cell_1_0 cell_1_1 ... cell_1_width-1\n"
+                "...\n"
+                "cell_height-1_0 cell_height-1_1 ... cell_height-1_width-1\n"
+                "where cell_x_y is 0 (dead) or 1 (alive)\n");
+
+    initialize_board(&board);
+
+    start_game(&board, iterations, ((args->summarize != 0) ? 0 : &print_board));
+
+    if (args->summarize)
+        print_board(&board);
+
+    free_board(&board);
+
     return EXIT_SUCCESS;
 }
