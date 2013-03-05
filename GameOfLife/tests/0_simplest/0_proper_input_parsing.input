@@ -1,0 +1,9 @@
+# this is comment
+# First: size of board (2x2)
+2 2
+# First row <dead,alive>
+01
+# Second row: <alive, alive>
+11
+0
+

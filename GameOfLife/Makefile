@@ -28,9 +28,9 @@ $(PROJECT): $(OBJECTS_A) $(OBJECTS_C)
 	@echo -en "\033[38m\033[32mLinking $(PROJECT)...\033[0m\n"
 	$(CC) $(LFLAGS) $^ -I $(INCLUDES) -o $(BINARY)
 
-$(OBJECTS_C): $(BIN)/%.o : $(SRC)/kernel/%.cpp
+$(OBJECTS_C): $(BIN)/%.o : $(SRC)/kernel/%.c
 	@echo -en "Compiling \033[38m\033[33m$(patsubst $(SRC)/kernel/%,%, $<)\033[0m...\n"
-	$(CC) $(CFLAGS) $< -I $(INCLUDES) -I $(GRAMMAR_BIN) -o $@
+	$(CC) $(CFLAGS) $< -I $(INCLUDES) -o $@
 	
 $(OBJECTS_A): $(BIN)/%.o : $(SRC)/kernel/%.asm
 	@echo -en "Assembling \033[38m\033[33m$(patsubst $(SRC)/kernel/%,%, $<)\033[0m...\n"
