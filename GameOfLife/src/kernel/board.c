@@ -16,7 +16,8 @@ int initialize_board(struct Board* board)
     int i;
     for (i = 0; i < board->height; ++i)
     {
-        board->cells[i] = (cell_t*)malloc(board->width * sizeof(cell_t));
+        // calloc because it zeroes allocated memmory
+        board->cells[i] = (cell_t*)calloc(board->width, sizeof(cell_t));
         if (board->cells[i] == 0) return -1;
     }
 

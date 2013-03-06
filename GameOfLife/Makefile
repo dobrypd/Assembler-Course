@@ -11,13 +11,15 @@ OBJECTS_C:=$(patsubst $(SRC)/kernel/%.c,$(BIN)/%.o,$(wildcard $(SRC)/kernel/*.c)
 OBJECTS_A:=$(patsubst $(SRC)/kernel/%.asm,$(BIN)/%.o,$(wildcard $(SRC)/kernel/*.asm))
 
 OPTDBG= -O2 -DNDEBUG
+NASMDBG=
 ifeq ($(debug), 1)
 	OPTDBG= -g
+	NASMDBG= -g
 endif
 
 
 NASM=nasm
-NASM_FLAGS=-f elf64
+NASM_FLAGS=-f elf64 $(NASMDBG)
 CC=gcc
 CFLAGS=-Wall -Werror -c $(OPTDBG) -D_ARCH_$(ARCH)
 LFLAGS=-Wall -Werror $(OPTDBG)

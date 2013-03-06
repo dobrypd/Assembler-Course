@@ -39,7 +39,7 @@ make_iteration:
     ;; rdx - source
     ;; rcx - destination
     call get_neighbors
-    mov [rcx], rax
+    mov rax, [rcx]
     mov word [rax], 0
     ;mov word [rax+1], 0
     ;mov word [rax+2], 0

@@ -11,6 +11,8 @@
 #include "game.h"
 #include "printer.h"
 
+#define WIDTH   50
+#define HEIGHT  60
 
 void show_help(char* prog_name)
 {
@@ -54,33 +56,33 @@ void parse_args(struct Arguments* args, int argc, char** argv)
 int parse_input(long* iterations, struct Board* board)
 {
     *iterations = 0;
-
     char* line = 0;
     size_t size = 0;
+    int input_width = 0, input_height = 0;
 
-    while ((line == 0) || (line[0] == '#')) getline(&line, &size, stdin);
-    sscanf(line, "%d %d", &(board->width), &(board->height));
-    free(line); line = 0;
     while ((line == 0) || (line[0] == '#')) getline(&line, &size, stdin);
     sscanf(line, "%ld", iterations);
     free(line); line = 0;
+    while ((line == 0) || (line[0] == '#')) getline(&line, &size, stdin);
+    sscanf(line, "%d %d", &input_width, &input_height);
+    free(line); line = 0;
 
 #ifndef NDEBUG
-    fprintf(stderr, "Iterations: %ld, board size: %d x %d\n",
-            *iterations, board->width, board->height);
+    fprintf(stderr, "Iterations: %ld, input board size: %d x %d\n",
+            *iterations, input_width, input_height);
 #endif
-
-    if (initialize_board(board)) {
-        printf("Cannot initialize board, exiting.\n");
-        exit(EXIT_FAILURE);
+    if ((input_width > board->width) || (input_height > board->height)) {
+        fprintf(stderr, "Input is too large, maximum board size is: %d x %d",
+                board->width, board->height);
+        return -1;
     }
 
     int i, j;
     char* sub_line;
-    for (i = 0; i < board->height; ++i) {
+    for (i = 0; i < input_height; ++i) {
         while ((line == 0) || (line[0] == '#')) getline(&line, &size, stdin);
         sub_line = line;
-        for (j = 0; j < board->width; ++j){
+        for (j = 0; j < input_width; ++j){
             char value;
             sscanf(sub_line, "%c", &value);
             board->cells[i][j] = value == ' ' ? (cell_t)0 : (cell_t)1;
@@ -101,8 +103,16 @@ int main(int argc, char** argv)
     struct Board board;
     long iterations;
 
+    board.width = WIDTH;
+    board.height = HEIGHT;
+
+    if (initialize_board(&board)) {
+        fprintf(stderr, "Cannot initialize board, exiting.\n");
+        exit(EXIT_FAILURE);
+    }
+
     if (parse_input(&iterations, &board)) {
-        printf("Input error.\nInput schema:\n\twidth height\n\t"
+        fprintf(stderr, "Input error.\nInput schema:\n\twidth height\n\t"
                 "cell_0_0 cell_0_1 ... cell_0_width-1\n\t"
                 "cell_1_0 cell_1_1 ... cell_1_width-1\n\t...\n\t"
                 "cell_height-1_0 cell_height-1_1 ... cell_height-1_width-1\n"
