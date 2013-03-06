@@ -18,19 +18,26 @@ void show_help(char* prog_name)
 {
     printf("using %s [options]\n"
             "options:\n"
+            "-x value\t- declare board width (default %d),\n"
+            "-y value\t- declare board height (default %d),\n"
             "-h\t- show this help message,\n"
-            "-s\t- summarize, display only last board,\n", prog_name);
+            "-s\t- summarize, display only last board,\n",
+            prog_name, WIDTH, HEIGHT);
 }
 
 struct Arguments {
     int summarize;
+    int width;
+    int height;
 };
 
 void parse_args(struct Arguments* args, int argc, char** argv)
 {
     args->summarize = 0;
+    args->width = WIDTH;
+    args->height = HEIGHT;
     int c;
-    while ((c = getopt(argc, argv, "hs")) != -1)
+    while ((c = getopt(argc, argv, "hsx:y:")) != -1)
     {
         switch (c)
         {
@@ -40,6 +47,12 @@ void parse_args(struct Arguments* args, int argc, char** argv)
             break;
         case 's':
             args->summarize = 1;
+            break;
+        case 'x':
+            args->width = atoi(optarg);
+            break;
+        case 'y':
+            args->height = atoi(optarg);
             break;
         case '?':
             show_help(argv[0]);
@@ -103,8 +116,8 @@ int main(int argc, char** argv)
     struct Board board;
     long iterations;
 
-    board.width = WIDTH;
-    board.height = HEIGHT;
+    board.width = args.width;
+    board.height = args.height;
 
     if (initialize_board(&board)) {
         fprintf(stderr, "Cannot initialize board, exiting.\n");

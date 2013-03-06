@@ -14,7 +14,8 @@ DEBUG_OUT=0
 PROJECT_DIR=`pwd`
 TESTS_IN_DIR=$PROJECT_DIR/tests/
 BIN=$PROJECT_DIR/bin/
-GOL=gol
+GOL_ARGS="-s -x 50 -y 50"
+GOL="$PROJECT_DIR/gol $GOL_ARGS"
 
 
 for i in `find  $TESTS_IN_DIR -iname "*.input"`
@@ -29,9 +30,9 @@ do
     
     if [ $DEBUG_OUT == 0 ]
     then
-    	$GOL $i 1>$GEN_OUT 2> /dev/null
+    	$GOL < $i 1>$GEN_OUT 2> /dev/null
     else
-        $GOL $i 1>$GEN_OUT.out 
+        $GOL < $i 1>$GEN_OUT.out 
     fi
     
     if [ ! -f $GEN_OUT ] || [ ! -f $OUT_FN ]
