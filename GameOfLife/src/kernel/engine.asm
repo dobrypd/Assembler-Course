@@ -4,33 +4,34 @@
 ;;
 ;;
 
-    section .data
+;;    section .data
 
-debug_output:
-    db "DBG: %d"
-
-
+;;debug_output:
+;;    db "DBG: %d"
 
 
     section .text
-
     global make_iteration
-    extern printf
+
+
+;; get_cell just checks if x and y is in board
+;; it's not a function (calling conventions ommited)
+;; int get_cell (int x, int y, int width, int height, cell_t** cells)
+get_neighbour:
+    push rbp
+
 
 
 ;; get no of neighbors
-;; int get_neighbors(int last, int x, int y, cell_t** cells)
+;; int get_neighbors(int last, int x, int y, int w, int h, cell_t** cells)
 get_neighbors:
-    ;; rdi - last
-    ;; rsi - x
-    ;; rdx - y
-    ;; rcx - cells
     mov rdi, debug_output
     call printf
     ret
 
 
 
+;; main function
 ;; make_iteration(int width, int height, cell_t** source, cell_t** destination)
 ;; cell_t is defined in board.h
 make_iteration:
