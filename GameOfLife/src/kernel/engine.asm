@@ -40,30 +40,43 @@
 ;; writes proper destination[i][j]
 ;; source - rdx
 ;; destination - rcx
-;; number of neibours - rbx
-;; arguments: %1 - row (i), %2 - collumn (j)
-;; used registers: r9, r10, r11, r12, rax
-%macro write_cell 2
-        ;; source[i][j] = source + i * width * ptr_size + j * size_of_cell_t
-        lea r10, [%1 * ptr_size] ; offset
-        add r10, [%2 * size_of_cell_t]
-        mov r9, rdx ; source
-        add r9, r10  ; &source[i][j]
-        mov r11, rcx ; destination
-        add r11, r10 ; &destination[i][j]
-        mov al, [r9] ; source[i][j]
-        mov byte [r11], al ; destination[i][j] = source[i][j]
+;; arguments: %1 - rowoffset, %2 - collumn offset, %3 - number of neibours
+;; used registers: r13, r12, rax
+%macro write_cell 3
+        ;; & source[i][j] = *(source + rowoffset) + collumnoffset
+        mov r13, rdx
+        add r13, %1
+        mov r13, [r13]
+        add r13, %2 ; r13 == & source[i][j]
+        mov r12, rcx
+        add r12, %1
+        mov r12, [r12]
+        add r12, %2 ; r12 == & destination[i][j]
+
+        mov r11, [r13]
+        mov al, byte [r13] ; al = source[i][j]
+        mov byte [r12], al ; destination[i][j] = source[i][j]
 
         ;; check if alive
-        cmp byte 0, al ; source[i][j] == 0
+        test al, al ; source[i][j] == 0
         je %%dead
+
         ;; source[i][j] is alive
+        cmp %3, 2
+        jl %%kill
+        cmp %3, 3
+        jg %%kill
+        jump %%skip
+    %%kill:
+        mov [r12], byte 0
+        jump %%skip
 
-        cmp 2,
     %%dead:
-
-
-        jmp %%skip
+        ;; source[i][j] is dead
+        cmp %3, 3
+        je %%skip
+        ;; make alive
+        mov [r12], byte 1
     %%skip:
 %endmacro
 
@@ -83,6 +96,11 @@ make_iteration:
 
     ;; First Case - iteration without first and last collumn
     write_cell r8, r9
+    
+    
+    ;;First column
+    
+    ;;Last column
 
 
     ;; Epilogue
