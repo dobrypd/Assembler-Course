@@ -4,18 +4,45 @@
 ;;
 ;;
 
-;;    section .data
 
-;;debug_output:
-;;    db "DBG: %d"
+
+%ifndef NDEBUG
+    section .data
+debug_output:
+    db `DBG:%d\n`, 0
+%endif
+
 
     section .text
     global make_iteration
+%ifndef NDEBUG
+    extern printf
+%endif
 
 
 ;; definitions
 %define size_of_cell_t 2
 %define ptr_size 8
+
+;;debug_macro/1
+;; very simple debugging procedure, prints argument
+;; saving->restoring registers
+%ifndef NDEBUG
+%macro dbg_print 1
+    push rax
+    push rdi
+    push rsi
+
+    mov rax, %1
+    mov rdi, debug_output
+    mov rsi, rax
+    call printf
+
+    pop rsi
+    pop rdi
+    pop rax
+%endmacro
+%endif
 
 ;; write_cell/3
 ;; writes proper destination[i][j]
@@ -39,10 +66,10 @@
         jl %%kill
         cmp %3, 3
         jg %%kill
-        jump %%skip
+        jmp %%skip
     %%kill:
         mov [%2], byte 0
-        jump %%skip
+        jmp %%skip
 
     %%dead:
         ;; source[i][j] is dead
@@ -91,12 +118,21 @@ make_iteration:
 
     ;; Prologue
     push rbp
-    mov qword rbp, rsp
+    mov rbp, rsp
 
+%ifndef NDEBUG
+    dbg_print rdi
+    dbg_print rsi
+    dbg_print rdx
+    dbg_print rcx
+%endif
 
     ;; First Case - iteration without first and last collumn
-    write_cell r8, r9
-    
+    mov rbx, 0
+    mov r11, 0
+    mov r10, 0
+
+    find_and_write_cell r11, r10, rbx
     
     ;;First column
     
@@ -104,5 +140,5 @@ make_iteration:
 
 
     ;; Epilogue
-    pop qword rbp
+    pop rbp
     ret

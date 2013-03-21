@@ -11,7 +11,7 @@ OBJECTS_C:=$(patsubst $(SRC)/kernel/%.c,$(BIN)/%.o,$(wildcard $(SRC)/kernel/*.c)
 OBJECTS_A:=$(patsubst $(SRC)/kernel/%.asm,$(BIN)/%.o,$(wildcard $(SRC)/kernel/*.asm))
 
 OPTDBG= -O2 -DNDEBUG
-NASMDBG=
+NASMDBG= -DNDEBUG
 ifeq ($(debug), 1)
 	OPTDBG= -g
 	NASMDBG= -g
