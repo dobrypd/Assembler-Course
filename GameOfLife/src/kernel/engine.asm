@@ -186,8 +186,45 @@ make_iteration:
     prologue
 
     ;; First Case - iteration without first and last collumn
-    find_and_write_cell r11, r10, rbx
-    
+    ; r10 row offset
+    ; r9  collumn offset
+
+    ;; TODO: calculate width-1 offset, save to rdi
+    ;; TODO: calculate height-1 offset, save to rsi
+    mov r10, 0
+.while_row:
+    cmp r10, (width-1 offset)
+    jge .while_row_end
+
+    mov r8, 0 ; r8 <- nbrs
+
+    ; begin loop by row
+    mov r14, 0 ; r14 <- top
+    mov r15, 0 ; r15 <- center
+    ; r11 <- bottom
+    ;TODO: sub r10, ptr_size ; j-1
+
+    mov r9, 0
+.while_column:
+    cmp r9, (height-1 offset)
+    jge .while_column_end
+
+    ; begin loop by column
+
+
+
+    ; end loop by column
+
+    add r9, size_of_cell_t
+    jmp .while_column
+.while_column_end:
+
+    ; end loop by row
+
+    add r10, ptr_size
+    jmp .while_row
+.while_row_end:
+
     ;;First column
     
     ;;Last column
