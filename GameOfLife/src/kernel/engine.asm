@@ -104,7 +104,7 @@ debug_output:
 %%dead:
     ;; source[i][j] is dead
     cmp %3, 3
-    je %%skip
+    jne %%skip
     ;; make alive
     mov [%2], byte 1
 %%skip:
@@ -186,10 +186,6 @@ make_iteration:
     prologue
 
     ;; First Case - iteration without first and last collumn
-    mov rbx, 3
-    mov r11, 0
-    mov r10, 0
-
     find_and_write_cell r11, r10, rbx
     
     ;;First column
