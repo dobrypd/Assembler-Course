@@ -9,7 +9,7 @@
 %ifndef NDEBUG
     section .data
 debug_output:
-    db `DBG:%d\n`, 0
+    db `>DBG:%d\n`, 0
 %endif
 
 
@@ -24,23 +24,53 @@ debug_output:
 %define size_of_cell_t 2
 %define ptr_size 8
 
-;;debug_macro/1
+
+%ifndef NDEBUG
+;; pushallimusing\0 popallimusing\0
+;; simmilar to pusha, but with registers which I'm using
+%macro pushallimusing 0
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rsi
+    push rdi
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+%endmacro
+%macro popallimusing 0
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+%endmacro
+;; dbg_print/1
 ;; very simple debugging procedure, prints argument
 ;; saving->restoring registers
-%ifndef NDEBUG
 %macro dbg_print 1
-    push rax
-    push rdi
-    push rsi
-
+    pushallimusing
     mov rax, %1
     mov rdi, debug_output
     mov rsi, rax
+    xor rax, rax
     call printf
-
-    pop rsi
-    pop rdi
-    pop rax
+    popallimusing
 %endmacro
 %endif
 
@@ -54,30 +84,30 @@ debug_output:
 ;; registers after macro:
 ;;      al  - source[i][j]
 %macro write_cell 3
-        mov al, byte [%1] ; al = source[i][j]
-        mov byte [%2], al ; destination[i][j] = source[i][j]
+    mov al, byte [%1] ; al = source[i][j]
+    mov byte [%2], al ; destination[i][j] = source[i][j]
 
-        ;; check if alive
-        test al, al ; source[i][j] == 0
-        je %%dead
+    ;; check if alive
+    test al, al ; source[i][j] == 0
+    je %%dead
 
-        ;; source[i][j] is alive
-        cmp %3, 2
-        jl %%kill
-        cmp %3, 3
-        jg %%kill
-        jmp %%skip
-    %%kill:
-        mov [%2], byte 0
-        jmp %%skip
+    ;; source[i][j] is alive
+    cmp %3, 2
+    jl %%kill
+    cmp %3, 3
+    jg %%kill
+    jmp %%skip
+%%kill:
+    mov [%2], byte 0
+    jmp %%skip
 
-    %%dead:
-        ;; source[i][j] is dead
-        cmp %3, 3
-        je %%skip
-        ;; make alive
-        mov [%2], byte 1
-    %%skip:
+%%dead:
+    ;; source[i][j] is dead
+    cmp %3, 3
+    je %%skip
+    ;; make alive
+    mov [%2], byte 1
+%%skip:
 %endmacro
 
 ;; find_and_write_cell/3
@@ -94,41 +124,69 @@ debug_output:
 ;;      r12 - &destination[i][j]
 ;;      al  - source[i][j]
 %macro find_and_write_cell 3
-        ;; & source[i][j] = *(source + rowoffset) + collumnoffset
-        mov r13, rdx
-        add r13, %1
-        mov r13, [r13]
-        add r13, %2 ; r13 == & source[i][j]
-        mov r12, rcx
-        add r12, %1
-        mov r12, [r12]
-        add r12, %2 ; r12 == & destination[i][j]
+    ;; & source[i][j] = *(source + rowoffset) + collumnoffset
+    mov r13, rdx
+    add r13, %1
+    mov r13, [r13]
+    add r13, %2 ; r13 == & source[i][j]
+    mov r12, rcx
+    add r12, %1
+    mov r12, [r12]
+    add r12, %2 ; r12 == & destination[i][j]
 
-        write_cell r13, r12, %3
+    write_cell r13, r12, %3
 %endmacro
 
-;; main function
-;; make_iteration(int width, int height, cell_t** source, cell_t** destination)
-;; cell_t is defined in board.h
-make_iteration:
-    ;; rdi - width
-    ;; rsi - height
-    ;; rdx - source
-    ;; rcx - destination
+;; save(restore)_across_functions_reg
+;; what registers in gcc need to be saved across functions
+;; without rbp and rsp
+%macro save_across_functions_reg 0
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+%endmacro
+%macro restore_across_functions_reg 0
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+%endmacro
 
-    ;; Prologue
+%macro prologue 0
     push rbp
     mov rbp, rsp
-
+    sub rsp, 16 ;; RED ZONE
+    save_across_functions_reg
 %ifndef NDEBUG
     dbg_print rdi
     dbg_print rsi
     dbg_print rdx
     dbg_print rcx
 %endif
+%endmacro
+
+%macro epilogue 0
+    restore_across_functions_reg
+    mov rsp, rbp
+    pop rbp
+    ret
+%endmacro
+
+;; main function
+;; make_iteration(int width, int height, cell_t** source, cell_t** destination)
+;; cell_t is defined in board.h
+;; rdi - width
+;; rsi - height
+;; rdx - source
+;; rcx - destination
+make_iteration:
+    prologue
 
     ;; First Case - iteration without first and last collumn
-    mov rbx, 0
+    mov rbx, 3
     mov r11, 0
     mov r10, 0
 
@@ -138,7 +196,4 @@ make_iteration:
     
     ;;Last column
 
-
-    ;; Epilogue
-    pop rbp
-    ret
+    epilogue

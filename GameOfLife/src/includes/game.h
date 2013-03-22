@@ -9,7 +9,7 @@
 
 #include "board.h"
 
-typedef void (print_board_ft)(struct Board*);
+typedef void (*print_board_ft)(struct Board*);
 
 void start_game(struct Board* board, long iterations,
         print_board_ft print_board);

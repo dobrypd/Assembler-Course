@@ -133,7 +133,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    start_game(&board, iterations, ((args.summarize != 0) ? 0 : &print_board));
+    start_game(&board, iterations, ((args.summarize != 0) ? 0 : (&print_board)));
     if (args.summarize) print_board(&board);
 
     if (free_board(&board)) {

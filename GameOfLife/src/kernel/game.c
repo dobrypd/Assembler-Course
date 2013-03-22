@@ -33,6 +33,9 @@ void start_game(struct Board* board, long iterations,
         cell_t** tmp_cells = board->cells;
         board->cells = next_board.cells;
         next_board.cells = tmp_cells;
+        if (print_board != 0) {
+            (*print_board)(board);
+        }
     }
 
     free_board(&next_board);
