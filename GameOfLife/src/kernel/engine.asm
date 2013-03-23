@@ -9,7 +9,7 @@
 %ifndef NDEBUG
     section .data
 debug_output:
-    db `>DBG:%d\n`, 0
+    db `>DBG: (line:%-4llu) val: %-12llu ptr: %-12p\n`, 0
 %endif
 
 
@@ -60,14 +60,17 @@ debug_output:
     pop rbx
     pop rax
 %endmacro
-;; dbg_print/1
+;; dbg_print/2
 ;; very simple debugging procedure, prints argument
 ;; saving->restoring registers
 %macro dbg_print 1
     pushallimusing
-    mov rax, %1
+    mov rax, __LINE__
+    mov rbx, %1
     mov rdi, debug_output
     mov rsi, rax
+    mov rdx, rbx
+    mov rcx, rbx
     xor rax, rax
     call printf
     popallimusing
@@ -110,6 +113,30 @@ debug_output:
 %%skip:
 %endmacro
 
+;; get_cell/4
+;; save &cells[i][j] to %1
+;; agruments:
+;;      %1 - row offset
+;;      %2 - column offset
+;;      %3 - cells
+;;      %4 - output
+%macro get_cell 4
+%ifndef NDEBUG
+    dbg_print %3
+    dbg_print %4
+%endif
+    mov %4, %3 ;; TODO: there is something wrong, because mov does not work proper
+    mov %4, 0
+    ;lea %4, %3
+%ifndef NDEBUG
+    dbg_print %3
+    dbg_print %4
+%endif
+    add %4, %1
+    mov %4, [%4]
+    add %4, %2 ; %4 == & cells[i][j] ;; TODO:
+%endmacro
+
 ;; find_and_write_cell/3
 ;; writes proper destination[i][j]
 ;; source - rdx
@@ -125,16 +152,24 @@ debug_output:
 ;;      al  - source[i][j]
 %macro find_and_write_cell 3
     ;; & source[i][j] = *(source + rowoffset) + collumnoffset
-    mov r13, rdx
-    add r13, %1
-    mov r13, [r13]
-    add r13, %2 ; r13 == & source[i][j]
-    mov r12, rcx
-    add r12, %1
-    mov r12, [r12]
-    add r12, %2 ; r12 == & destination[i][j]
-
+    get_cell %1, %2, rdx, r13 ; r13 == & source[i][j]
+    get_cell %1, %2, rcx, r12 ; r12 == & destination[i][j]
     write_cell r13, r12, %3
+%endmacro
+
+;; eval_max_offset/2
+;; evaluate maximum offset (bytes)
+;; destination - %1
+;; arguments:
+;;      %1 - all values
+;;      %2 - size of single
+;; used registers: rax, rbx
+%macro eval_max_offset 2
+    mov rbx, rdx
+    mov rax, %2
+    mul %1
+    mov %1, rax
+    mov rdx, rbx
 %endmacro
 
 ;; save(restore)_across_functions_reg
@@ -184,16 +219,25 @@ debug_output:
 ;; rcx - destination
 make_iteration:
     prologue
-
     ;; First Case - iteration without first and last collumn
-    ; r10 row offset
-    ; r9  collumn offset
 
-    ;; TODO: calculate width-1 offset, save to rdi
-    ;; TODO: calculate height-1 offset, save to rsi
-    mov r10, 0
+    eval_max_offset rdi, ptr_size
+    eval_max_offset rsi, size_of_cell_t
+
+%ifndef NDEBUG
+    dbg_print rdi
+    dbg_print rsi
+%endif
+
+    sub rdi, ptr_size ; width-1
+    sub rsi, size_of_cell_t ; height-1
+
+    mov r10, ptr_size ; because I'm starting from 1 (ommiting frame)
 .while_row:
-    cmp r10, (width-1 offset)
+%ifndef NDEBUG
+    dbg_print r10
+%endif
+    cmp r10, rdi
     jge .while_row_end
 
     mov r8, 0 ; r8 <- nbrs
@@ -201,12 +245,22 @@ make_iteration:
     ; begin loop by row
     mov r14, 0 ; r14 <- top
     mov r15, 0 ; r15 <- center
-    ; r11 <- bottom
-    ;TODO: sub r10, ptr_size ; j-1
-
+    mov r11, 0 ; r11 <- bottom
+    ; r11 <- bottom = source[0][j-1] + source[0][j] + source[0][j+1];
+    mov rbx, r10
+    sub rbx, ptr_size ; j-1
+    get_cell 0, rbx, rdx, rax ; rax = &source[0][j-1]
+    add r11, [rax]
+    add rax, ptr_size ; rax = &source[0][j]
+    add r11, [rax]
+    add rax, ptr_size ; rax = &source[0][j+1]
+    add r11, [rax]
     mov r9, 0
 .while_column:
-    cmp r9, (height-1 offset)
+%ifndef NDEBUG
+    dbg_print r9
+%endif
+    cmp r9, rsi
     jge .while_column_end
 
     ; begin loop by column
