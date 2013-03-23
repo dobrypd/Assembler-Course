@@ -4,12 +4,15 @@
 ;;
 ;;
 
+%if __BITS__!=64
+    %error WORKS ONLY ON x86_64 ARCHITECTURE
+%endif
 
 
 %ifndef NDEBUG
     section .data
 debug_output:
-    db `>DBG: (line:%-4llu) val: %-12llu ptr: %-12p\n`, 0
+    db `>DBG: (line:%-4llu) val: %-12llu : %-12p\n`, 0
 %endif
 
 
@@ -22,7 +25,7 @@ debug_output:
 
 ;; definitions
 %define size_of_cell_t 2
-%define ptr_size 8
+%define ptr_size __BITS__
 
 
 %ifndef NDEBUG
@@ -39,16 +42,8 @@ debug_output:
     push r9
     push r10
     push r11
-    push r12
-    push r13
-    push r14
-    push r15
 %endmacro
 %macro popallimusing 0
-    pop r15
-    pop r14
-    pop r13
-    pop r12
     pop r11
     pop r10
     pop r9
@@ -65,10 +60,9 @@ debug_output:
 ;; saving->restoring registers
 %macro dbg_print 1
     pushallimusing
-    mov rax, __LINE__
     mov rbx, %1
     mov rdi, debug_output
-    mov rsi, rax
+    mov rsi, __LINE__
     mov rdx, rbx
     mov rcx, rbx
     xor rax, rax
@@ -121,20 +115,10 @@ debug_output:
 ;;      %3 - cells
 ;;      %4 - output
 %macro get_cell 4
-%ifndef NDEBUG
-    dbg_print %3
-    dbg_print %4
-%endif
-    mov %4, %3 ;; TODO: there is something wrong, because mov does not work proper
-    mov %4, 0
-    ;lea %4, %3
-%ifndef NDEBUG
-    dbg_print %3
-    dbg_print %4
-%endif
+    mov %4, %3
     add %4, %1
     mov %4, [%4]
-    add %4, %2 ; %4 == & cells[i][j] ;; TODO:
+    add %4, %2 ; %4 == & cells[i][j]
 %endmacro
 
 ;; find_and_write_cell/3
@@ -255,6 +239,7 @@ make_iteration:
     add r11, [rax]
     add rax, ptr_size ; rax = &source[0][j+1]
     add r11, [rax]
+
     mov r9, 0
 .while_column:
 %ifndef NDEBUG
