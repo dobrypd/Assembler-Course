@@ -127,7 +127,7 @@ debug_output:
 ;; destination - rcx
 ;; arguments:
 ;;      %1 - row offset,
-;;      %2 - collumn offset,
+;;      %2 - column offset,
 ;;      %3 - number of neibours
 ;; used registers: r13, r12, rax
 ;; registers after macro:
@@ -135,7 +135,7 @@ debug_output:
 ;;      r12 - &destination[i][j]
 ;;      al  - source[i][j]
 %macro find_and_write_cell 3
-    ;; & source[i][j] = *(source + rowoffset) + collumnoffset
+    ;; & source[i][j] = *(source + rowoffset) + columnoffset
     get_cell %1, %2, rdx, r13 ; r13 == & source[i][j]
     get_cell %1, %2, rcx, r12 ; r12 == & destination[i][j]
     write_cell r13, r12, %3
@@ -251,7 +251,7 @@ make_iteration:
 
 
 
-    ;; First Case - iteration without first and last collumn
+    ;; First Case - iteration without first and last column
 
 
 
