@@ -25,7 +25,7 @@ debug_output:
 
 ;; definitions
 %define size_of_cell_t 1
-%define ptr_size __BITS__
+%define ptr_size 8 ; __BITS__ / 8
 
 
 %ifndef NDEBUG
@@ -291,7 +291,10 @@ make_iteration:
     ;next 3 lines simmilar to get_cell
     add rax, rdx
     mov rax, [rax] ;; TODO: sth is wrong here, wrong address
-    add rax, rbx
+%ifndef NDEBUG
+    dbg_print rax
+%endif
+    add rax, rbx;;
     summs_next_three_nbrs rax, r11
 %ifndef NDEBUG
     dbg_print r11

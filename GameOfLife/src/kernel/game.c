@@ -27,6 +27,7 @@ void start_game(struct Board* board, long iterations,
 
     for(i = 0; i < iterations; ++i) {
         if (debug) fprintf(stderr, "Starting iteration %ld\n", i);
+        printf(": %p, %p\n", &(board->cells[0]), &(board->cells[1]));
         make_iteration(board->width, board->height, board->cells,
                 next_board.cells);
         // swap
