@@ -24,7 +24,7 @@ debug_output:
 
 
 ;; definitions
-%define size_of_cell_t 2
+%define size_of_cell_t 1
 %define ptr_size __BITS__
 
 
@@ -141,6 +141,39 @@ debug_output:
     write_cell r13, r12, %3
 %endmacro
 
+;; summs_next_three_nbrs/2
+;; Look out! This could be kind a tricky, because I'm saving cell as byte
+;; when getting [%1] I could have 8 cells returned.
+;; (used only 3 in this implementation).
+;; I want sum cells[_][j-1] + cells[_][j] + cells[_][j+1]
+;; Lets say that cells[_][j-1] is on adress 100 (it equals %1)
+;; | 100 | 101 | 102 | 103 | 104 | 105 | 106 | 107 | <- adresses
+;; | j-1 |   j | j+1 |  SOMETHING, MAYBE NEXT CELLS, MAYBE TRASH
+;; LITTLE ENDIAN assumption!!!
+;; after mov rbx, [%1] -> rbx: 0x(TRASH)(j+1)(j)(j-1)
+;; arguments:
+;;      %1 - address of this part of cells,
+;;      %2 - summs to this,
+;; used registers: rax, rbx
+%macro summs_next_three_nbrs 2
+    mov rbx, [%1]
+    shl rbx, 40 ; remove trash
+    shr rbx, 40
+    ;count rbx 1's to rax
+    ; could be 3 of them, on
+    mov rax, rbx
+    shr rax, 16
+    add %2, rax
+    mov rax, rbx
+    and rax, 0x000100;
+    shr rax, 8
+    add %2, rax
+    mov rax, rbx
+    and rax, 0x000001;
+    shr rax, 40
+    add %2, rax
+%endmacro
+
 ;; eval_max_offset/2
 ;; evaluate maximum offset (bytes)
 ;; destination - %1
@@ -205,24 +238,24 @@ make_iteration:
     prologue
     ;; First Case - iteration without first and last collumn
 
-    eval_max_offset rdi, ptr_size
-    eval_max_offset rsi, size_of_cell_t
+    eval_max_offset rdi, size_of_cell_t
+    eval_max_offset rsi, ptr_size
 
 %ifndef NDEBUG
     dbg_print rdi
     dbg_print rsi
 %endif
 
-    sub rdi, ptr_size ; width-1
-    sub rsi, size_of_cell_t ; height-1
+    sub rdi, size_of_cell_t ; width-1
+    sub rsi, ptr_size ; height-1
 
-    mov r10, ptr_size ; because I'm starting from 1 (ommiting frame)
-.while_row:
+    mov r10, size_of_cell_t ; because I'm starting from 1 (ommiting frame)
+.while_column:
 %ifndef NDEBUG
     dbg_print r10
 %endif
     cmp r10, rdi
-    jge .while_row_end
+    jge .while_column_end
 
     mov r8, 0 ; r8 <- nbrs
 
@@ -232,40 +265,59 @@ make_iteration:
     mov r11, 0 ; r11 <- bottom
     ; r11 <- bottom = source[0][j-1] + source[0][j] + source[0][j+1];
     mov rbx, r10
-    sub rbx, ptr_size ; j-1
+    sub rbx, size_of_cell_t ; j-1
     get_cell 0, rbx, rdx, rax ; rax = &source[0][j-1]
-    add r11, [rax]
-    add rax, ptr_size ; rax = &source[0][j]
-    add r11, [rax]
-    add rax, ptr_size ; rax = &source[0][j+1]
-    add r11, [rax]
+    summs_next_three_nbrs rax, r11
+%ifndef NDEBUG
+    dbg_print r11
+%endif
 
     mov r9, 0
-.while_column:
+.while_row:
 %ifndef NDEBUG
     dbg_print r9
 %endif
     cmp r9, rsi
-    jge .while_column_end
+    jge .while_row_end
 
     ; begin loop by column
 
+    mov r14, r15
+    mov r15, r11
+    mov rax, r9
+    add rax, ptr_size ; j+1
+    mov rbx, r10
+    sub rbx, size_of_cell_t ; j-1
+    get_cell rax, rbx, rdx, rax ; rax = &source[0][j-1] ;; TODO: check if can use rax twice
+    summs_next_three_nbrs rax, r11
 
+    mov r8, r14
+    add r8, r15
+    add r8, r11
+    sub r8, source[i][j] ;; TODO:
+
+    find_and_write_cell row_off, col_off, r8 ;; TODO:
 
     ; end loop by column
 
-    add r9, size_of_cell_t
-    jmp .while_column
-.while_column_end:
-
-    ; end loop by row
-
-    add r10, ptr_size
+    add r9, ptr_size
     jmp .while_row
 .while_row_end:
 
+    mov r8, r15
+    add r8, r11
+    sub r8, source[i][j] ;; TODO i, j
+    find_and_write_cell row_off, col_off, r8 ;; TODO: i, j
+
+    ; end loop by row
+
+    add r10, size_of_cell_t
+    jmp .while_column
+.while_column_end:
+
     ;;First column
-    
+    ;TODO:
     ;;Last column
+    ;TODO:
 
     epilogue

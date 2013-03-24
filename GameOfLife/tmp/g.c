@@ -43,7 +43,7 @@ int make_iteration(int width, int height, uint8_t** source, uint8_t** destinatio
             LIVE_OR_DEAD(i, j);
         }
         // right part of frame
-        nbrs = center + bottom - source[width-1][j]; // Torus case
+        nbrs = center + bottom - source[i][j]; // Torus case
         LIVE_OR_DEAD(i, j);
     }
 
