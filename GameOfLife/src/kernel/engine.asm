@@ -153,14 +153,14 @@ debug_output:
 ;; after mov rbx, [%1] -> rbx: 0x(TRASH)(j+1)(j)(j-1)
 ;; arguments:
 ;;      %1 - address of this part of cells,
-;;      %2 - summs to this,
+;;      %2 - summs to this, first removes it
 ;; used registers: rax, rbx
 %macro summs_next_three_nbrs 2
+    mov %2, 0
     mov rbx, [%1]
-    shl rbx, 40 ; remove trash
-    shr rbx, 40
+    and rbx, 0xffffff
     ;count rbx 1's to rax
-    ; could be 3 of them, on
+    ; could be 3 of them
     mov rax, rbx
     shr rax, 16
     add %2, rax
@@ -170,7 +170,6 @@ debug_output:
     add %2, rax
     mov rax, rbx
     and rax, 0x000001;
-    shr rax, 40
     add %2, rax
 %endmacro
 
@@ -290,11 +289,8 @@ make_iteration:
     sub rbx, size_of_cell_t ; j-1
     ;next 3 lines simmilar to get_cell
     add rax, rdx
-    mov rax, [rax] ;; TODO: sth is wrong here, wrong address
-%ifndef NDEBUG
-    dbg_print rax
-%endif
-    add rax, rbx;;
+    mov rax, [rax]
+    add rax, rbx
     summs_next_three_nbrs rax, r11
 %ifndef NDEBUG
     dbg_print r11
@@ -303,7 +299,9 @@ make_iteration:
     add r8, r15
     add r8, r11
     get_cell r9, r10, rdx, r13 ; r13 == & source[i][j]
-    sub r8b, byte [r13] ;; TODO: CHECK BITES
+    mov bl, byte [r13]
+    and rbx, 0x1
+    sub r8, rbx
 %ifndef NDEBUG
     dbg_print r8
 %endif

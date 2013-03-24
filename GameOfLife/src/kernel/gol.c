@@ -14,6 +14,10 @@
 #define WIDTH   50
 #define HEIGHT  60
 
+#if WIDTH < 3
+#error WIDTH SHOULD BE AT LEAST 3
+#endif
+
 void show_help(char* prog_name)
 {
     printf("using %s [options]\n"
