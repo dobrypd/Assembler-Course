@@ -259,7 +259,7 @@ make_iteration:
 
     mov r8, 0 ; r8 <- nbrs
 
-    ; begin loop by row
+    ; begin loop by column
     mov r14, 0 ; r14 <- top
     mov r15, 0 ; r15 <- center
     mov r11, 0 ; r11 <- bottom
@@ -280,25 +280,33 @@ make_iteration:
     cmp r9, rsi
     jge .while_row_end
 
-    ; begin loop by column
+    ; begin loop by row
 
     mov r14, r15
     mov r15, r11
     mov rax, r9
-    add rax, ptr_size ; j+1
+    add rax, ptr_size ; i+1
     mov rbx, r10
     sub rbx, size_of_cell_t ; j-1
-    get_cell rax, rbx, rdx, rax ; rax = &source[0][j-1] ;; TODO: check if can use rax twice
+    ;next 3 lines simmilar to get_cell
+    add rax, rdx
+    mov rax, [rax] ;; TODO: sth is wrong here, wrong address
+    add rax, rbx
     summs_next_three_nbrs rax, r11
-
+%ifndef NDEBUG
+    dbg_print r11
+%endif
     mov r8, r14
     add r8, r15
     add r8, r11
-    sub r8, source[i][j] ;; TODO:
+    get_cell r9, r10, rdx, r13 ; r13 == & source[i][j]
+    sub r8b, byte [r13] ;; TODO: CHECK BITES
+%ifndef NDEBUG
+    dbg_print r8
+%endif
+    find_and_write_cell r9, r10, r8
 
-    find_and_write_cell row_off, col_off, r8 ;; TODO:
-
-    ; end loop by column
+    ; end loop by row
 
     add r9, ptr_size
     jmp .while_row
@@ -306,10 +314,11 @@ make_iteration:
 
     mov r8, r15
     add r8, r11
-    sub r8, source[i][j] ;; TODO i, j
-    find_and_write_cell row_off, col_off, r8 ;; TODO: i, j
+    get_cell r9, r10, rdx, r13 ; r13 == & source[i][j]
+    sub r8b, byte [r13]
+    find_and_write_cell r9, r10, r8
 
-    ; end loop by row
+    ; end loop by column
 
     add r10, size_of_cell_t
     jmp .while_column

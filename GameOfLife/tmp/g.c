@@ -65,7 +65,7 @@ int make_iteration(int width, int height, uint8_t** source, uint8_t** destinatio
     // j = width -1
     top = 0;
     center = 0;
-    bottom  = source[0][width-2] + source[0][width-2];
+    bottom  = source[0][width-2] + source[0][width-1];
     for (i = 0; i < height - 1; ++i)
     {
         top = center;
