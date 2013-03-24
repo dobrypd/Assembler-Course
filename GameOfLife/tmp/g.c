@@ -74,7 +74,7 @@ int make_iteration(int width, int height, uint8_t** source, uint8_t** destinatio
         nbrs = top + center + bottom - source[i][width-1];
         LIVE_OR_DEAD(i, width-1);
     }
-    nbrs = center + bottom - source[width-1][height-1];
+    nbrs = center + bottom - source[height-1][width-1];
     LIVE_OR_DEAD(height - 1, width - 1);
 
     return 0;

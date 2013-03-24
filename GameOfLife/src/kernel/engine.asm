@@ -172,6 +172,18 @@ debug_output:
     and rax, 0x000001;
     add %2, rax
 %endmacro
+; summs_next_two_nbrs, almost this same as previous
+%macro summs_next_two_nbrs 2
+    mov %2, 0
+    mov rbx, [%1]
+    and rbx, 0xffff
+    mov rax, rbx
+    shr rax, 8
+    add %2, rax
+    mov rax, rbx
+    and rax, 0x1;
+    add %2, rax
+%endmacro
 
 ;; eval_max_offset/2
 ;; evaluate maximum offset (bytes)
@@ -235,7 +247,14 @@ debug_output:
 ;; rcx - destination
 make_iteration:
     prologue
+
+
+
+
     ;; First Case - iteration without first and last collumn
+
+
+
 
     eval_max_offset rdi, size_of_cell_t
     eval_max_offset rsi, ptr_size
@@ -259,6 +278,7 @@ make_iteration:
     mov r8, 0 ; r8 <- nbrs
 
     ; begin loop by column
+
     mov r14, 0 ; r14 <- top
     mov r15, 0 ; r15 <- center
     mov r11, 0 ; r11 <- bottom
@@ -316,7 +336,9 @@ make_iteration:
     mov r8, r15
     add r8, r11
     get_cell r9, r10, rdx, r13 ; r13 == & source[i][j]
-    sub r8b, byte [r13]
+    mov bl, byte [r13]
+    and rbx, 0x1
+    sub r8, rbx
     find_and_write_cell r9, r10, r8
 
     ; end loop by column
@@ -325,9 +347,141 @@ make_iteration:
     jmp .while_column
 .while_column_end:
 
+
+
+
+
     ;;First column
-    ;TODO:
+
+
+
+
+    mov r14, 0 ; r14 <- top
+    mov r15, 0 ; r15 <- center
+    mov r11, 0 ; r11 <- bottom
+    ; r11 <- bottom = source[0][0] + source[0][1]
+    mov rax, [rdx] ; rax = &source[0][0]
+    summs_next_two_nbrs rax, r11
+%ifndef NDEBUG
+    dbg_print r11
+%endif
+
+    mov r9, 0
+.while_row_fst_col:
+%ifndef NDEBUG
+    dbg_print r9
+%endif
+    cmp r9, rsi
+    jge .while_row_end_fst_col
+
+    ; begin loop by row
+
+    mov r14, r15
+    mov r15, r11
+    mov rax, r9
+    add rax, ptr_size ; i+1
+    add rax, rdx
+    mov rax, [rax] ; rax == & source[i+1][0]
+    summs_next_two_nbrs rax, r11
+%ifndef NDEBUG
+    dbg_print r11
+%endif
+    mov r8, r14
+    add r8, r15
+    add r8, r11
+    get_cell r9, 0, rdx, r13 ; r13 == & source[i][0]
+    mov bl, byte [r13]
+    and rbx, 0x1
+    sub r8, rbx
+%ifndef NDEBUG
+    dbg_print r8
+%endif
+    find_and_write_cell r9, 0, r8
+
+    ; end loop by row
+
+    add r9, ptr_size
+    jmp .while_row_fst_col
+.while_row_end_fst_col:
+
+    mov r8, r15
+    add r8, r11
+    get_cell r9, 0, rdx, r13 ; r13 == & source[i][0]
+    mov bl, byte [r13]
+    and rbx, 0x1
+    sub r8, rbx
+    find_and_write_cell r9, 0, r8
+    
+
+
+
+    
     ;;Last column
-    ;TODO:
+
+
+
+
+    mov r14, 0 ; r14 <- top
+    mov r15, 0 ; r15 <- center
+    mov r11, 0 ; r11 <- bottom
+    ; r11 <- bottom = source[0][width-2] + source[0][width-1]
+    mov r10, rdi
+    sub r10, size_of_cell_t
+    mov rax, [rdx]
+    add rax, r10 ; rax = &source[0][width-2]
+    summs_next_two_nbrs rax, r11
+%ifndef NDEBUG
+    dbg_print r11
+%endif
+
+    mov r9, 0
+.while_row_lst_col:
+%ifndef NDEBUG
+    dbg_print r9
+%endif
+    cmp r9, rsi
+    jge .while_row_end_lst_col
+
+    ; begin loop by row
+
+    mov r14, r15
+    mov r15, r11
+    mov rax, r9
+    add rax, ptr_size ; i+1
+    add rax, rdx
+    mov rax, [rax] ; rax == & source[i+1][0]
+    add rax, r10 ; rax == & source[i+1][width-2]
+    summs_next_two_nbrs rax, r11
+%ifndef NDEBUG
+    dbg_print r11
+%endif
+    mov r8, r14
+    add r8, r15
+    add r8, r11
+    get_cell r9, rdi, rdx, r13 ; r13 == & source[i][width-1]
+    mov bl, byte [r13]
+    and rbx, 0x1
+    sub r8, rbx
+%ifndef NDEBUG
+    dbg_print r8
+%endif
+    find_and_write_cell r9, rdi, r8
+
+    ; end loop by row
+
+    add r9, ptr_size
+    jmp .while_row_lst_col
+.while_row_end_lst_col:
+
+    mov r8, r15
+    add r8, r11
+    get_cell r9, rdi, rdx, r13 ; r13 == & source[height-1][width-1]
+    mov bl, byte [r13]
+    and rbx, 0x1
+    sub r8, rbx
+    find_and_write_cell r9, rdi, r8
+    
+
+
 
     epilogue
