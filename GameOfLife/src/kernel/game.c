@@ -5,6 +5,7 @@
  */
 
 #include <stdio.h>
+#include <time.h>
 #include "game.h"
 #include "board.h"
 #include "engine.h"
@@ -15,10 +16,12 @@
     const int debug=0;
 #endif
 
-void start_game(struct Board* board, long iterations,
+unsigned long long start_game(struct Board* board, long iterations,
         print_board_ft print_board)
 {
     if (debug) fprintf(stderr, "Starting game...\n");
+    unsigned long long elapsed = 0;
+    clock_t current;
     long i;
     struct Board next_board;
     next_board.width = board->width;
@@ -27,8 +30,10 @@ void start_game(struct Board* board, long iterations,
 
     for(i = 0; i < iterations; ++i) {
         if (debug) fprintf(stderr, "Starting iteration %ld\n", i);
+        current = clock();
         make_iteration(board->width, board->height, board->cells,
                 next_board.cells);
+        elapsed += clock() - current;
         // swap
         cell_t** tmp_cells = board->cells;
         board->cells = next_board.cells;
@@ -39,4 +44,5 @@ void start_game(struct Board* board, long iterations,
     }
 
     free_board(&next_board);
+    return elapsed;
 }

@@ -11,7 +11,10 @@
 
 typedef void (*print_board_ft)(struct Board*);
 
-void start_game(struct Board* board, long iterations,
+/**
+ * returns time spent in ASM procedure
+ */
+unsigned long long start_game(struct Board* board, long iterations,
         print_board_ft print_board);
 
 

@@ -143,9 +143,11 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    start_game(&board, args.iterations, ((args.summarize != 0) ? 0 : (&print_board)));
+    unsigned long long time_spent =
+            start_game(&board, args.iterations,
+                    ((args.summarize != 0) ? 0 : (&print_board)));
     if (args.summarize) print_board(&board);
-
+    printf("%llu [clock ticks]\n", time_spent);
     if (free_board(&board)) {
 #ifndef NDEBUG
         fprintf(stderr, "Cannot free board.\n");
