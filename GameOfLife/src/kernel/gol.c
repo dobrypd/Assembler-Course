@@ -20,7 +20,8 @@
 
 void show_help(char* prog_name)
 {
-    printf("using %s [options]\n"
+    printf("using %s iterations [options]\n"
+            "iterations - to make"
             "options:\n"
             "-x value\t- declare board width (default %d),\n"
             "-y value\t- declare board height (default %d),\n"
@@ -33,6 +34,7 @@ struct Arguments {
     int summarize;
     int width;
     int height;
+    long iterations;
 };
 
 void parse_args(struct Arguments* args, int argc, char** argv)
@@ -40,7 +42,9 @@ void parse_args(struct Arguments* args, int argc, char** argv)
     args->summarize = 0;
     args->width = WIDTH;
     args->height = HEIGHT;
+    args->iterations = -1;
     int c;
+    int index;
     while ((c = getopt(argc, argv, "hsx:y:")) != -1)
     {
         switch (c)
@@ -68,25 +72,28 @@ void parse_args(struct Arguments* args, int argc, char** argv)
             break;
         }
     }
+
+    for (index = optind; index < argc; index++)
+        args->iterations = atol(argv[index]);
+
+    if (args->iterations < 0) {
+        show_help(argv[0]);
+        exit(EXIT_FAILURE);
+    }
 }
 
-int parse_input(long* iterations, struct Board* board)
+int parse_input(struct Board* board)
 {
-    *iterations = 0;
     char* line = 0;
     size_t size = 0;
     int input_width = 0, input_height = 0;
 
     while ((line == 0) || (line[0] == '#')) getline(&line, &size, stdin);
-    sscanf(line, "%ld", iterations);
-    free(line); line = 0;
-    while ((line == 0) || (line[0] == '#')) getline(&line, &size, stdin);
     sscanf(line, "%d %d", &input_width, &input_height);
     free(line); line = 0;
 
 #ifndef NDEBUG
-    fprintf(stderr, "Iterations: %ld, input board size: %d x %d\n",
-            *iterations, input_width, input_height);
+    fprintf(stderr, "Input board size: %d x %d\n", input_width, input_height);
 #endif
     if ((input_width > board->width) || (input_height > board->height)) {
         fprintf(stderr, "Input is too large, maximum board size is: %d x %d",
@@ -118,7 +125,6 @@ int main(int argc, char** argv)
     parse_args(&args, argc, argv);
 
     struct Board board;
-    long iterations;
 
     board.width = args.width;
     board.height = args.height;
@@ -128,7 +134,7 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
-    if (parse_input(&iterations, &board)) {
+    if (parse_input(&board)) {
         fprintf(stderr, "Input error.\nInput schema:\n\twidth height\n\t"
                 "cell_0_0 cell_0_1 ... cell_0_width-1\n\t"
                 "cell_1_0 cell_1_1 ... cell_1_width-1\n\t...\n\t"
@@ -137,7 +143,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    start_game(&board, iterations, ((args.summarize != 0) ? 0 : (&print_board)));
+    start_game(&board, args.iterations, ((args.summarize != 0) ? 0 : (&print_board)));
     if (args.summarize) print_board(&board);
 
     if (free_board(&board)) {

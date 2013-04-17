@@ -18,32 +18,37 @@ GOL_ARGS="-s -x 50 -y 50"
 GOL="$PROJECT_DIR/gol $GOL_ARGS"
 
 
-for i in `find  $TESTS_IN_DIR -iname "*.input"`
-do
-    echo -en "\033[38m\033[32mGame Of Life runned on file : \033[0m"$i"\n"
-    
+for i in `find  $TESTS_IN_DIR -iname "*.output"`
+do  
     BN=$(basename $i)
     DN=$(dirname $i)
     
-    GEN_OUT="${i%.*}".gen_output
-    OUT_FN="${i%.*}".output
+    FILENAME_WTH_ITERATIONS="${BN%.*}"
+    INPUT_FILENAME_SMALL="${FILENAME_WTH_ITERATIONS%_*}"
+    INPUT_FILENAME="$DN/$INPUT_FILENAME_SMALL.input"
+    GEN_OUT=$DN/$FILENAME_WTH_ITERATIONS.gen_output
+    OUT_FN=$DN/$FILENAME_WTH_ITERATIONS.output
+    ITERATIONS="${FILENAME_WTH_ITERATIONS##*_}"
+    
+    echo -en "\033[38m\033[32mGame Of Life runned on file : \033[0m"$INPUT_FILENAME_SMALL"\tIterations :"
+    echo -en "\033[38m\033[35m $ITERATIONS\033[0m\n"
     
     if [ $DEBUG_OUT == 0 ]
     then
-    	$GOL < $i 1>$GEN_OUT 2> /dev/null
+    	$GOL $ITERATIONS < $INPUT_FILENAME 1>$GEN_OUT 2> /dev/null
     else
-        $GOL < $i 1>$GEN_OUT.out 
+        $GOL $ITERATIONS < $INPUT_FILENAME 1>$GEN_OUT.out 
     fi
     
     if [ ! -f $GEN_OUT ] || [ ! -f $OUT_FN ]
     then
-        echo -en "\033[38m\033[31mBAD (output file not found) [$BN]\033[0m\n"
+        echo -en "\033[38m\033[31mBAD (output file not found) [$INPUT_FILENAME_SMALL]\033[0m\n"
     else
         if diff $GEN_OUT $OUT_FN
         then
-            echo -en "\033[38m\033[32mOK [$BN]\033[0m\n"
+            echo -en "\033[38m\033[32mOK [$INPUT_FILENAME_SMALL]\033[0m\n"
         else
-            echo -en "\033[38m\033[31mBAD (outputs differs) [$BN]\033[0m\n"
+            echo -en "\033[38m\033[31mBAD (outputs differs) [$INPUT_FILENAME_SMALL]\033[0m\n"
         fi
     fi
 
