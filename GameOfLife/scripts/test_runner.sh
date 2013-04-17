@@ -37,8 +37,11 @@ do
     then
     	$GOL $ITERATIONS < $INPUT_FILENAME 1>$GEN_OUT 2> /dev/null
     else
-        $GOL $ITERATIONS < $INPUT_FILENAME 1>$GEN_OUT.out 
+        $GOL $ITERATIONS < $INPUT_FILENAME 1>$GEN_OUT 
     fi
+    
+    #Remove elapsed time
+	sed -i '$ d' $GEN_OUT
     
     if [ ! -f $GEN_OUT ] || [ ! -f $OUT_FN ]
     then
