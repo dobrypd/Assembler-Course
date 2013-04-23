@@ -26,6 +26,7 @@ mask_3:
     dq 0x03030303
 
     section .text
+    align 64
     global make_iteration
     extern printf
 
@@ -333,8 +334,36 @@ mask_3:
     ret
 %endmacro
 
+;; check_capability\0
+;; check if user has sse2 (or if debug sse3)
 %macro check_capability 0
+    push rdi
+    push rsi
+    push rdx
+    push rcx
     
+    xor rax, rax
+    cpuid
+%ifndef NDEBUG
+    and edx, 1 << 26
+    dbg_print rdx 
+%endif
+    test rdx, 1 << 26
+    jnz gotsse2
+    mov rdi, sse_capability_error_msg
+    xor rax, rax
+    call printf
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
+    epilogue
+
+gotsse2:    
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
 %endmacro
 
 ;; main function
@@ -347,7 +376,7 @@ mask_3:
 make_iteration:
     prologue
     check_capability
-
+    
 
     ;; create masks
     create_byte_mask xmm12, [mask_1]
@@ -418,7 +447,7 @@ make_iteration:
     ;; r15 <- &destination[i][j]
     get_cell r15, r9, r10, rcx
     
-    movdqa xmm3, xmm5 ; source[i][j+0..14]
+    movdqa xmm3, xmm5 ; source[i][j+0..15]
 %ifndef NDEBUG
     dbg_xmm xmm3
 %endif
