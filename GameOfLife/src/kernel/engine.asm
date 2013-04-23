@@ -344,12 +344,23 @@ mask_3:
     
     xor rax, rax
     cpuid
-%ifndef NDEBUG
-    and edx, 1 << 26
-    dbg_print rdx 
-%endif
+    ;one of this sould guaranty used sse instructions
+    test rdx, 1 << 25
+    jnz gotsse
     test rdx, 1 << 26
-    jnz gotsse2
+    jnz gotsse
+    test rcx, 1
+    jnz gotsse
+    test rcx, 1 << 9
+    jnz gotsse
+    test rcx, 1 << 19
+    jnz gotsse
+    test rcx, 1 << 20 
+    jnz gotsse
+    test rcx, 1 << 6 
+    jnz gotsse
+    test rcx, 1 << 7 
+    jnz gotsse
     mov rdi, sse_capability_error_msg
     xor rax, rax
     call printf
@@ -359,7 +370,7 @@ mask_3:
     pop rdi
     epilogue
 
-gotsse2:    
+gotsse:
     pop rcx
     pop rdx
     pop rsi
