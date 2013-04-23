@@ -38,7 +38,7 @@ mask_3:
 
 
 %ifndef NDEBUG
-;;push / pop for xmms
+;;pushm\1 / popm\1 for xmms
 %macro pushm 1
     sub rsp, 16
     movdqu [rsp], %1
@@ -47,7 +47,6 @@ mask_3:
     movdqu %1, [rsp]
     add rsp, 16
 %endmacro
-
 ;; pushallimusing\0 popallimusing\0
 ;; simmilar to pusha, but with registers which I'm using
 %macro pushallimusing 0
@@ -132,14 +131,14 @@ mask_3:
 
 
 ;; write_cell/3
-;; writes proper destination[i][j] (and next 14 collumns)
+;; writes proper destination[i][j] (and next 16 collumns)
 ;; arguments:
 ;;      %1 - &destination[i][j],
 ;;      %2 - source (xmm) 16 cells,
-;;      %3 - number of neibours (xmm) 14 proper cells.
+;;      %3 - number of neibours (xmm) 16 proper cells.
 ;; used registers: xmm6, xmm7
+;; using masks in xmm10 (2), xmm11 (3) and xmm12 (1)
 %macro write_cells 3
-    
     movdqa xmm6, %3
     pcmpeqb xmm6, xmm10
     pand xmm6, %2
@@ -387,6 +386,9 @@ make_iteration:
     jge .while_column_end
 
     ; begin loop by column
+
+    pxor xmm0, xmm0
+    pxor xmm1, xmm1
 
     ; xmm2 <- bottom = source[0][j-1] + source[0][j] + source[0][j+1]
     ; from j-1 to j-1+16;
