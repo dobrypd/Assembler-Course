@@ -17,7 +17,7 @@ My implementation assumptions:
 Compilation, architectures:
 ---------------------------
 
- * Only x86_64,
+ * Only x86_64, sse
  * To compile it you need NASM
  (tested on version 2.10.07 Feb 11 2013 and 2.10 Mar 20 2012),
  * GCC (tested on 4.7.1 20120810 and 4.7.2 20121109),
@@ -33,6 +33,7 @@ Testing:
 
  Single test involves:
  * running `gol` with parameters:
+  * number of iterations
   * size of board (-x, -y),
   * summarized output (-s),
  * Output differences check.
