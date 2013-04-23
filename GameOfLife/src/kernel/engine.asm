@@ -38,6 +38,16 @@ mask_3:
 
 
 %ifndef NDEBUG
+;;push / pop for xmms
+%macro pushm 1
+    sub rsp, 16
+    movdqu [rsp], %1
+%endmacro
+%macro popm 1
+    movdqu %1, [rsp]
+    add rsp, 16
+%endmacro
+
 ;; pushallimusing\0 popallimusing\0
 ;; simmilar to pusha, but with registers which I'm using
 %macro pushallimusing 0
@@ -51,8 +61,24 @@ mask_3:
     push r9
     push r10
     push r11
+    pushm xmm0
+    pushm xmm1
+    pushm xmm2
+    pushm xmm3
+    pushm xmm4
+    pushm xmm5
+    pushm xmm6
+    pushm xmm7
 %endmacro
 %macro popallimusing 0
+    popm xmm7
+    popm xmm6
+    popm xmm5
+    popm xmm4
+    popm xmm3
+    popm xmm2
+    popm xmm1
+    popm xmm0
     pop r11
     pop r10
     pop r9
@@ -362,14 +388,6 @@ make_iteration:
 
     ; begin loop by column
 
-    pxor xmm4, xmm4 ; xmm4 <- nbrs
-
-    pxor xmm0, xmm0 ; xmm0 <- top    (nbrs)
-    pxor xmm1, xmm1 ; xmm1 <- center (nbrs)
-    pxor xmm2, xmm2 ; xmm2 <- bottom (nbrs)
-    pxor xmm3, xmm3 ; xmm3 <- current row (16 cells)
-    pxor xmm5, xmm5 ; xmm5 <- bottom row (16 cells)
-
     ; xmm2 <- bottom = source[0][j-1] + source[0][j] + source[0][j+1]
     ; from j-1 to j-1+16;
     mov rbx, r10
@@ -379,7 +397,6 @@ make_iteration:
     movdqu xmm5, [rax]
     movdqu xmm6, [rax + size_of_cell_t]
     movdqu xmm7, [rax + 2 * size_of_cell_t]
-
     summs_alive xmm2, xmm5, xmm6, xmm7
 
     movdqa xmm5, xmm6
@@ -428,7 +445,7 @@ make_iteration:
     psubb xmm4, xmm3 ;; NBRS sum
 
 %ifndef NDEBUG
-    dbg_xmm xmm0
+    dbg_xmm xmm4
 %endif
 
     write_cells r15, xmm3, xmm4
