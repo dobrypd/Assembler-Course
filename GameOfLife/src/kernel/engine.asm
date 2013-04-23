@@ -13,18 +13,27 @@
     section .data
 debug_output:
     db `>DBG: (line:%-4llu) val: %-12llu : %-12p\n`, 0
+debug_output_sse:
+    db `>DBG: (line:%-4llu) %-16p%-16p\n`, 0
 %endif
-
+sse_capability_error_msg:
+    db `Can not execute.\nYour processor do not support some of SSE operations.\n`, 0
+mask_1:
+    dq 0x01010101
+mask_2:
+    dq 0x02020202
+mask_3:
+    dq 0x03030303
 
     section .text
     global make_iteration
-%ifndef NDEBUG
     extern printf
-%endif
 
 
 ;; definitions
 %define size_of_cell_t 1
+;; window is size of concurrent cells in one iteration
+%define size_of_window 16 ; 16 = (16) * size_of_cell_t
 %define ptr_size 8 ; __BITS__ / 8
 
 
@@ -69,7 +78,54 @@ debug_output:
     call printf
     popallimusing
 %endmacro
+%macro dbg_xmm 1
+    pushallimusing
+    movq rbx, %1
+    mov rdi, debug_output_sse
+    mov rsi, __LINE__
+    mov rdx, rbx
+    pextrq rbx, %1, 1
+    mov rcx, rbx
+    xor rax, rax
+    call printf
+    popallimusing
+%endmacro
 %endif
+
+
+;; create_byte_mask/2
+;; create mask in xmm register
+;; arguments:
+;;      %1 - destination (xmm) 16 cells,
+;;      %2 - mask (two bytes),
+%macro create_byte_mask 2
+    mov eax, %2
+    movd %1, eax
+    shufps %1, %1, 00000000B
+%endmacro
+
+
+;; write_cell/3
+;; writes proper destination[i][j] (and next 14 collumns)
+;; arguments:
+;;      %1 - &destination[i][j],
+;;      %2 - source (xmm) 16 cells,
+;;      %3 - number of neibours (xmm) 14 proper cells.
+;; used registers: xmm6, xmm7
+%macro write_cells 3
+    
+    movdqa xmm6, %3
+    pcmpeqb xmm6, xmm10
+    pand xmm6, %2
+     
+    movdqa xmm7, %3
+    pcmpeqb xmm7, xmm11
+    por xmm6, xmm7
+    
+    pand xmm6, xmm12
+    
+    movdqu [%1], xmm6
+%endmacro
 
 ;; write_cell/3
 ;; writes proper destination[i][j]
@@ -110,15 +166,15 @@ debug_output:
 ;; get_cell/4
 ;; save &cells[i][j] to %1
 ;; agruments:
-;;      %1 - row offset
-;;      %2 - column offset
-;;      %3 - cells
-;;      %4 - output
+;;      %1 - output
+;;      %2 - row offset
+;;      %3 - coulumn offset
+;;      %4 - cells
 %macro get_cell 4
-    mov %4, %3
-    add %4, %1
-    mov %4, [%4]
-    add %4, %2 ; %4 == & cells[i][j]
+    mov %1, %4
+    add %1, %2
+    mov %1, [%1]
+    add %1, %3 ; %1 == & cells[i][j]
 %endmacro
 
 ;; find_and_write_cell/3
@@ -136,9 +192,23 @@ debug_output:
 ;;      al  - source[i][j]
 %macro find_and_write_cell 3
     ;; & source[i][j] = *(source + rowoffset) + columnoffset
-    get_cell %1, %2, rdx, r13 ; r13 == & source[i][j]
-    get_cell %1, %2, rcx, r12 ; r12 == & destination[i][j]
+    get_cell r13, %1, %2, rdx ; r13 == & source[i][j]
+    get_cell r12, %1, %2, rcx ; r12 == & destination[i][j]
     write_cell r13, r12, %3
+%endmacro
+
+;; summs_alive/4
+;; summs 14 cells (current row neighbors)
+;; arguments:
+;;      %1          - nbrs sum (xmm) - output,
+;;      %2          - source cells (xmm),
+;;      %3          - source cells + 1 (xmm),
+;;      %4          - source cells + 2 (xmm),
+;; used registers: xmm6
+%macro summs_alive 4
+    movdqa %1, %2
+    paddb %1, %3
+    paddb %1, %4
 %endmacro
 
 ;; summs_next_three_nbrs/2
@@ -238,6 +308,10 @@ debug_output:
     ret
 %endmacro
 
+%macro check_capability 0
+    
+%endmacro
+
 ;; main function
 ;; make_iteration(int width, int height, cell_t** source, cell_t** destination)
 ;; cell_t is defined in board.h
@@ -247,6 +321,17 @@ debug_output:
 ;; rcx - destination
 make_iteration:
     prologue
+    check_capability
+
+
+    ;; create masks
+    create_byte_mask xmm12, [mask_1]
+    create_byte_mask xmm10, [mask_2]
+    create_byte_mask xmm11, [mask_3]
+    
+%ifndef NDEBUG
+    dbg_xmm xmm11
+%endif
 
 
 
@@ -275,21 +360,29 @@ make_iteration:
     cmp r10, rdi
     jge .while_column_end
 
-    mov r8, 0 ; r8 <- nbrs
-
     ; begin loop by column
 
-    mov r14, 0 ; r14 <- top
-    mov r15, 0 ; r15 <- center
-    mov r11, 0 ; r11 <- bottom
-    ; r11 <- bottom = source[0][j-1] + source[0][j] + source[0][j+1];
+    pxor xmm4, xmm4 ; xmm4 <- nbrs
+
+    pxor xmm0, xmm0 ; xmm0 <- top    (nbrs)
+    pxor xmm1, xmm1 ; xmm1 <- center (nbrs)
+    pxor xmm2, xmm2 ; xmm2 <- bottom (nbrs)
+    pxor xmm3, xmm3 ; xmm3 <- current row (16 cells)
+    pxor xmm5, xmm5 ; xmm5 <- bottom row (16 cells)
+
+    ; xmm2 <- bottom = source[0][j-1] + source[0][j] + source[0][j+1]
+    ; from j-1 to j-1+16;
     mov rbx, r10
     sub rbx, size_of_cell_t ; j-1
-    get_cell 0, rbx, rdx, rax ; rax = &source[0][j-1]
-    summs_next_three_nbrs rax, r11
-%ifndef NDEBUG
-    dbg_print r11
-%endif
+    get_cell rax, 0, rbx, rdx ; rax = &source[0][j-1]
+    ;loads cells to xmm
+    movdqu xmm5, [rax]
+    movdqu xmm6, [rax + size_of_cell_t]
+    movdqu xmm7, [rax + 2 * size_of_cell_t]
+
+    summs_alive xmm2, xmm5, xmm6, xmm7
+
+    movdqa xmm5, xmm6
 
     mov r9, 0
 .while_row:
@@ -301,8 +394,19 @@ make_iteration:
 
     ; begin loop by row
 
-    mov r14, r15
-    mov r15, r11
+    ;; r14 <- &source[i][j]
+    get_cell r14, r9, r10, rdx
+    ;; r15 <- &destination[i][j]
+    get_cell r15, r9, r10, rcx
+    
+    movdqa xmm3, xmm5 ; source[i][j+0..14]
+%ifndef NDEBUG
+    dbg_xmm xmm3
+%endif
+
+    movdqa xmm0, xmm1 ; top <- center
+    movdqa xmm1, xmm2 ; center <- bottom
+
     mov rax, r9
     add rax, ptr_size ; i+1
     mov rbx, r10
@@ -311,21 +415,23 @@ make_iteration:
     add rax, rdx
     mov rax, [rax]
     add rax, rbx
-    summs_next_three_nbrs rax, r11
+    movdqu xmm5, [rax]
+    movdqu xmm6, [rax + size_of_cell_t]
+    movdqu xmm7, [rax + 2 * size_of_cell_t]
+    summs_alive xmm2, xmm5, xmm6, xmm7 ;; summs bottom
+    movdqa xmm5, xmm6
+
+
+    movdqa xmm4, xmm0 ;; NBRS sum + cell[i][j]
+    paddb xmm4, xmm1
+    paddb xmm4, xmm2
+    psubb xmm4, xmm3 ;; NBRS sum
+
 %ifndef NDEBUG
-    dbg_print r11
+    dbg_xmm xmm0
 %endif
-    mov r8, r14
-    add r8, r15
-    add r8, r11
-    get_cell r9, r10, rdx, r13 ; r13 == & source[i][j]
-    mov bl, byte [r13]
-    and rbx, 0x1
-    sub r8, rbx
-%ifndef NDEBUG
-    dbg_print r8
-%endif
-    find_and_write_cell r9, r10, r8
+
+    write_cells r15, xmm3, xmm4
 
     ; end loop by row
 
@@ -333,19 +439,26 @@ make_iteration:
     jmp .while_row
 .while_row_end:
 
-    mov r8, r15
-    add r8, r11
-    get_cell r9, r10, rdx, r13 ; r13 == & source[i][j]
-    mov bl, byte [r13]
-    and rbx, 0x1
-    sub r8, rbx
-    find_and_write_cell r9, r10, r8
+    get_cell r14, r9, r10, rdx ; r14 == & source[i][j]
+    get_cell r15, r9, r10, rcx ; r15 == & source[i][j]
+
+    movdqu xmm3, [r15]
+    movdqa xmm4, xmm1
+    paddb xmm4, xmm2
+    psubb xmm4, xmm3
+    write_cells r15, xmm3, xmm4
 
     ; end loop by column
 
-    add r10, size_of_cell_t
+    add r10, size_of_window
     jmp .while_column
 .while_column_end:
+
+
+
+
+
+    ;; END, main part
 
 
 
@@ -362,15 +475,9 @@ make_iteration:
     ; r11 <- bottom = source[0][0] + source[0][1]
     mov rax, [rdx] ; rax = &source[0][0]
     summs_next_two_nbrs rax, r11
-%ifndef NDEBUG
-    dbg_print r11
-%endif
 
     mov r9, 0
 .while_row_fst_col:
-%ifndef NDEBUG
-    dbg_print r9
-%endif
     cmp r9, rsi
     jge .while_row_end_fst_col
 
@@ -383,19 +490,13 @@ make_iteration:
     add rax, rdx
     mov rax, [rax] ; rax == & source[i+1][0]
     summs_next_two_nbrs rax, r11
-%ifndef NDEBUG
-    dbg_print r11
-%endif
     mov r8, r14
     add r8, r15
     add r8, r11
-    get_cell r9, 0, rdx, r13 ; r13 == & source[i][0]
+    get_cell r13, r9, 0, rdx ; r13 == & source[i][0]
     mov bl, byte [r13]
     and rbx, 0x1
     sub r8, rbx
-%ifndef NDEBUG
-    dbg_print r8
-%endif
     find_and_write_cell r9, 0, r8
 
     ; end loop by row
@@ -406,7 +507,7 @@ make_iteration:
 
     mov r8, r15
     add r8, r11
-    get_cell r9, 0, rdx, r13 ; r13 == & source[i][0]
+    get_cell r13, r9, 0, rdx ; r13 == & source[i][0]
     mov bl, byte [r13]
     and rbx, 0x1
     sub r8, rbx
@@ -430,15 +531,9 @@ make_iteration:
     mov rax, [rdx]
     add rax, r10 ; rax = &source[0][width-2]
     summs_next_two_nbrs rax, r11
-%ifndef NDEBUG
-    dbg_print r11
-%endif
 
     mov r9, 0
 .while_row_lst_col:
-%ifndef NDEBUG
-    dbg_print r9
-%endif
     cmp r9, rsi
     jge .while_row_end_lst_col
 
@@ -452,19 +547,13 @@ make_iteration:
     mov rax, [rax] ; rax == & source[i+1][0]
     add rax, r10 ; rax == & source[i+1][width-2]
     summs_next_two_nbrs rax, r11
-%ifndef NDEBUG
-    dbg_print r11
-%endif
     mov r8, r14
     add r8, r15
     add r8, r11
-    get_cell r9, rdi, rdx, r13 ; r13 == & source[i][width-1]
+    get_cell r13, r9, rdi, rdx ; r13 == & source[i][width-1]
     mov bl, byte [r13]
     and rbx, 0x1
     sub r8, rbx
-%ifndef NDEBUG
-    dbg_print r8
-%endif
     find_and_write_cell r9, rdi, r8
 
     ; end loop by row
@@ -475,7 +564,7 @@ make_iteration:
 
     mov r8, r15
     add r8, r11
-    get_cell r9, rdi, rdx, r13 ; r13 == & source[height-1][width-1]
+    get_cell r13, r9, rdi, rdx ; r13 == & source[height-1][width-1]
     mov bl, byte [r13]
     and rbx, 0x1
     sub r8, rbx
