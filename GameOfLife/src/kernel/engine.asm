@@ -344,7 +344,7 @@ mask_3:
     
     xor rax, rax
     cpuid
-    ;one of this sould guaranty used sse instructions
+    ;one of this sould guarantee used sse instructions
     test rdx, 1 << 25
     jnz gotsse
     test rdx, 1 << 26
