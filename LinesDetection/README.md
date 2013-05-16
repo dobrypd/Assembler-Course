@@ -20,10 +20,10 @@ working `arm-linux-gnu-gcc` command in case of cross-compilation.
 Cross-compilation could not work in this Makefile version.
 
  * If your native architecture is arm, or you want to cross-compile to arm:
- ** `$ make`
+ * * `$ make`
  * If you want native version (i.e. x86), will not compile assembly optimizations:
- ** `$ make arch=native`
- ** Remember that this will produce not optimal version. Mainly for testing purpose.
+ * * `$ make arch=native`
+ * * Remember that this will produce not optimal version. Mainly for testing purpose.
  * You can add `debug={1..10}` if you want to see debug outputs.
  `debug=1` shows less than `debug=2`, etc.
 
@@ -41,5 +41,13 @@ Only monochromatic image in Netpbm format, [wiki](http://en.wikipedia.org/wiki/N
 Output:
 --------
 
-TODO: List of lines.
+Text file with pairs of points (line_begin, line_end).
+Example, two lines, from (0,2) to (4,10), and from (32, 42) to (42, 44)
+
+    0 2 4 10
+    32 42 42 44
+
+Can return monochromatic image in Netpbm format,
+[wiki](http://en.wikipedia.org/wiki/Netpbm_format "PGM").
+Run `./linedetect --help` for more informations.
 
