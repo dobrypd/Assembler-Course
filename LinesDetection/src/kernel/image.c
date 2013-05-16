@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
+
 #include "config.h"
 #include "image.h"
 

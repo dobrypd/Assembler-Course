@@ -8,6 +8,7 @@
 #define IMAGE_OPERATIONS_H_
 
 #include <stdint.h>
+
 #include "image.h"
 #include "detector.h"
 

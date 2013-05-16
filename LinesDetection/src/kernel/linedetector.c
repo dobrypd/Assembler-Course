@@ -93,14 +93,14 @@ static void parse_args(int argc, char * argv[])
                     || (tmp_ulong > UINT_MAX))
                 usage(EXIT_FAILURE);
             global_args.min_line_length = tmp_ulong;
-            debug_print(LVL_INFO, "Setting minimal len to %d\n", tmp_ulong);
+            debug_print(LVL_INFO, "Setting minimal len to %lu\n", tmp_ulong);
             break;
         case 'f':
             global_args.output_format = NETPBM;
             break;
         case 'o':
             global_args.out_filename = optarg;
-            debug_print(LVL_INFO, "Setting output filename to %d\n", optarg);
+            debug_print(LVL_INFO, "Setting output filename to %s\n", optarg);
             break;
         case 'v':
             global_args.verbosity = 1;
@@ -128,6 +128,20 @@ static void parse_args(int argc, char * argv[])
             usage(EXIT_FAILURE);
             /* no break */
         }
+    }
+
+    if (global_args.verbosity > 0)
+        puts("verbose flag is set\n");
+
+    if (optind != (argc - 1))
+    {
+        puts("You must declare one input file.\n");
+        usage(EXIT_FAILURE);
+    }
+    else
+    {
+        global_args.input_filename = argv[optind];
+        debug_print(LVL_INFO, "Input filename %s\n", argv[optind]);
     }
 }
 
