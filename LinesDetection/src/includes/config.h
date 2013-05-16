@@ -8,16 +8,19 @@
 #define CONFIG_H_
 
 #ifndef NDEBUG
-#ifdef DBGLVL
-    static const int dbg_lvl = DNGLVL;
-#else
-    static const int dbg_lvl = 1;
+#ifndef DBGLVL
+#define DBGLVL 1
 #endif
 #else
-    static const int dbg_lvl = 0;
+#define DBGLVL 0
 #endif
 
-static const char * text_file_ext = "txt";
-static const char * NETPBM_file_ext = "pgm";
+
+/*
+ * This macro should be removed by gcc optimizations if not in debug mode.
+ */
+#define debug_print(lvl, fmt, ...) \
+    do { if (DBGLVL >= lvl) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+            __LINE__, __func__, __VA_ARGS__); } while (0)
 
 #endif /* CONFIG_H_ */

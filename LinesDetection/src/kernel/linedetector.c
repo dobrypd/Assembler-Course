@@ -130,6 +130,7 @@ static void parse_args(int argc, char * argv[])
 
 int main(int argc, char * argv[])
 {
+    debug_print(3, "Starting with %d args.\n", argc);
     program_name = argv[0];
     initialize_global_args();
     parse_args(argc, argv);
@@ -144,7 +145,6 @@ int main(int argc, char * argv[])
         free_image(image);
         fputs("Cannot continue: error while loading image.\n\n", stderr);
         exit(EXIT_FAILURE);
-        FILE* f;
     }
 
     lines_t lines;
@@ -154,25 +154,31 @@ int main(int argc, char * argv[])
         free_image(image);
         free_lines(lines);
         fputs("Cannot continue: error while detecting lines.\n\n", stderr);
-        exit(EXIT_FAILURE)
+        exit(EXIT_FAILURE);
     }
 
     if (global_args.output_format == NETPBM)
     {
         image_t output_image;
         output_image = copy_image(image);
+        if (check_image(output_image) != IMAGE_STATUS_OK)
+        {
+            free_image(image);
+            free_image(output_image);
+            free_lines(lines);
+            fputs("Cannot continue: error while copying image.\n\n", stderr);
+            exit(EXIT_FAILURE);
+        }
         add_lines_to_image(output_image, lines, global_args.color_line,
                 global_args.color_bg);
         save_image_to_file(output_image, ((global_args.out_filename == NULL)
-                ? (default_output_filename) : (global_args.out_filename));
+                ? (default_output_filename) : (global_args.out_filename)));
         free_image(output_image);
     }
     else if (global_args.out_filename != NULL)
     {
         save_lines_to_file(lines, global_args.out_filename);
     }
-
-    fprintf(stderr, "%s %s", text_file_ext, NETPBM_file_ext);
 
     free_lines(lines);
     free_image(image);
