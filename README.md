@@ -8,7 +8,8 @@ Go to directory with task if you want to read more specific informations about i
 Chronological list:
 -------------------
 
- 1. Game Of Life (without SSE and MMX)
+ 1. Game Of Life, (2 branches - with, and without SSE)
+ 2. Line detection.
 
 
 Author:
