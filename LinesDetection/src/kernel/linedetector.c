@@ -76,6 +76,7 @@ static void initialize_global_args()
 
 static void parse_args(int argc, char * argv[])
 {
+    debug_print(LVL_INFO, "Parsing arguments %d\n", argc);
     int opt;
     while (1)
     {
@@ -92,12 +93,14 @@ static void parse_args(int argc, char * argv[])
                     || (tmp_ulong > UINT_MAX))
                 usage(EXIT_FAILURE);
             global_args.min_line_length = tmp_ulong;
+            debug_print(LVL_INFO, "Setting minimal len to %d\n", tmp_ulong);
             break;
         case 'f':
             global_args.output_format = NETPBM;
             break;
         case 'o':
             global_args.out_filename = optarg;
+            debug_print(LVL_INFO, "Setting output filename to %d\n", optarg);
             break;
         case 'v':
             global_args.verbosity = 1;
@@ -130,7 +133,7 @@ static void parse_args(int argc, char * argv[])
 
 int main(int argc, char * argv[])
 {
-    debug_print(3, "Starting with %d args.\n", argc);
+    debug_print(LVL_LOWEST, "Starting with %d args.\n", argc);
     program_name = argv[0];
     initialize_global_args();
     parse_args(argc, argv);
@@ -146,6 +149,8 @@ int main(int argc, char * argv[])
         fputs("Cannot continue: error while loading image.\n\n", stderr);
         exit(EXIT_FAILURE);
     }
+    if (global_args.verbosity > 0)
+        printf("Loaded %s.\n", global_args.input_filename);
 
     lines_t lines;
     lines = detect_lines(image);
@@ -159,6 +164,9 @@ int main(int argc, char * argv[])
 
     if (global_args.output_format == NETPBM)
     {
+        debug_print(LVL_INFO, "Saving pgm %s\n", global_args.out_filename);
+        if (global_args.verbosity > 0)
+            printf("Will save pgm file in %s.\n", global_args.out_filename);
         image_t output_image;
         output_image = copy_image(image);
         if (check_image(output_image) != IMAGE_STATUS_OK)
@@ -177,13 +185,19 @@ int main(int argc, char * argv[])
     }
     else if (global_args.out_filename != NULL)
     {
+        debug_print(LVL_INFO, "Saving txt %s\n", global_args.out_filename);
+        if (global_args.verbosity > 0)
+            printf("Will save txt file in %s.\n", global_args.out_filename);
         save_lines_to_file(lines, global_args.out_filename);
     }
 
     free_lines(lines);
     free_image(image);
 
-    return 0;
+    if (global_args.verbosity > 0)
+        printf("Finished with success!\n");
+    debug_print(LVL_LOWEST, "Finished %s.\n", program_name);
+    return EXIT_SUCCESS;
 }
 
 static void usage(int status)

@@ -16,6 +16,16 @@
 #endif
 
 
+#define LVL_URGENT 0
+#define LVL_ERROR 1
+#define LVL_WARNING 2
+#define LVL_INFO 3
+#define LVL_LOW 4
+#define LVL_LOWER 5
+#define LVL_LOWEST 6
+#define LVL_ALL 1000
+
+
 /*
  * This macro should be removed by gcc optimizations if not in debug mode.
  */
