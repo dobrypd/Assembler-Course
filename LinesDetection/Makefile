@@ -27,8 +27,8 @@ ifdef debug
 	OPTDBG= -g -DDBGLVL=$(debug)
 endif
 
-AFLAGS=-Wall -Werror -
-CFLAGS=-Wall -Werror -c $(OPTDBG) -D_ARCH_$(ARCH)
+AFLAGS=-Wall -Werror -c $(OPTDBG)
+CFLAGS=-Wall -Werror -c $(OPTDBG)
 LFLAGS=-Wall -Werror $(OPTDBG)
 
 all : $(PROJECT)
