@@ -9,16 +9,26 @@
 
 #include <stdint.h>
 
-typedef uint8_t * * raw_image_mono_8_t;
-typedef uint8_t * * image_t;
-
 #define IMAGE_STATUS_OK 0
 #define IMAGE_STATUS_BAD 1
 
 enum image_file_type
 {
+    // In this version only one image file format.
     NETPBM_PGM
 };
+
+typedef uint8_t * * raw_image_mono_8_t;
+struct _image_t
+{
+    unsigned int width;
+    unsigned int height;
+    unsigned char max_deph;
+    enum image_file_type type;
+
+    raw_image_mono_8_t image_mono;
+};
+typedef struct _image_t * image_t;
 
 /*
  * Loading file from file, allocating necessary structures.
