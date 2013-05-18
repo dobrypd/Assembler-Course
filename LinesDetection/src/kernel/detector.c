@@ -23,7 +23,7 @@ lines_t detect_lines(image_t image)
 int check_lines(lines_t lines)
 {
     //XXX: implement
-    return DETECTION_STATUS_BAD;
+    return DETECTION_STATUS_OK;
 }
 
 void add_line(lines_t lines, int fst_line_begin, int fst_line_end,

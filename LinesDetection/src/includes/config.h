@@ -27,7 +27,8 @@
 
 
 /*
- * This macro should be removed by gcc optimizations if not in debug mode.
+ * This macro (code where this macro is used)
+ * should be removed by gcc optimizations if not in debug mode.
  */
 #define debug_print(lvl, fmt, ...) \
     do { if (DBGLVL >= lvl) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \

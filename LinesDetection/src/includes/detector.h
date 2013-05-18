@@ -9,8 +9,8 @@
 
 #include "image.h"
 
-#define DETECTION_STATUS_OK 0
-#define DETECTION_STATUS_BAD 1
+#define DETECTION_STATUS_OK 1
+#define DETECTION_STATUS_BAD 0
 
 typedef int * lines_t;
 

@@ -9,8 +9,8 @@
 
 #include <stdint.h>
 
-#define IMAGE_STATUS_OK 0
-#define IMAGE_STATUS_BAD 1
+#define IMAGE_STATUS_OK 1
+#define IMAGE_STATUS_BAD 0
 
 enum image_file_type
 {
@@ -23,7 +23,7 @@ struct _image_t
 {
     unsigned int width;
     unsigned int height;
-    unsigned char max_deph;
+    unsigned int max_deph;
     enum image_file_type type;
 
     raw_image_mono_8_t image_mono;
