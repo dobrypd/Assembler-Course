@@ -1,7 +1,7 @@
 // XXX: implementation
 
 
-#warning "EVEN MOCK IS NOT IMPLEMENTED"
+//warning "EVEN MOCK IS NOT IMPLEMENTED"
 
     .file   "engine.S"
     .section    .rodata
