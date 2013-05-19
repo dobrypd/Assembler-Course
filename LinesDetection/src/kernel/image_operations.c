@@ -4,6 +4,8 @@
  *
  */
 
+#define _GNU_SOURCE
+
 #include <math.h>
 #include <stdlib.h>
 #include "image_operations.h"

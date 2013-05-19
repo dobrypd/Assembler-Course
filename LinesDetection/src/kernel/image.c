@@ -15,7 +15,6 @@
 #include "config.h"
 #include "image.h"
 
-const char * NETPBM_file_ext = "pgm";
 #define PGM_ASCII 2
 #define PGM_BIN 5
 

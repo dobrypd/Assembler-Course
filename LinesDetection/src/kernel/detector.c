@@ -12,8 +12,6 @@
 #include "detector.h"
 #include "engine.h"
 
-const char * text_file_ext = "txt";
-
 
 lines_t detect_lines(image_t image, unsigned int minimal_line_length,
         int return_outputs_on_stdout)

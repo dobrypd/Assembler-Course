@@ -10,8 +10,8 @@
     .ascii  "Hello world!\012\000"
     .text
     .align  2
-    .global main
-    .type   main, %function
+    .global find_lines
+    .type   find_lines, %function
 find_lines:
     mov ip, sp
     stmfd   sp!, {fp, ip, lr, pc}
