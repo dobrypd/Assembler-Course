@@ -24,7 +24,6 @@ static int scann_image_properties(image_t image, FILE * inputfile, char * * buf,
         size_t * bufsize)
 {
     int scanned_args;
-    int value;
     int pgmtype;
     debug_print(LVL_INFO, "Loading image properties from file %p.\n",
             inputfile);
@@ -43,23 +42,16 @@ static int scann_image_properties(image_t image, FILE * inputfile, char * * buf,
             continue;
         }
 
-        if (scanned_args > 0)
-            sscanf(*buf, "%d\n", &value);
-        else
-            sscanf(*buf, "P%d\n", &value);
-
         switch (scanned_args) {
             case 0:
-                pgmtype = value;
+                sscanf(*buf, "P%d\n", &(pgmtype));
                 break;
             case 1:
-                image->width = value;
-                break;
-            case 2:
-                image->height = value;
+                sscanf(*buf, "%d %d\n", &(image->width), &(image->height));
+                scanned_args++;
                 break;
             case 3:
-                image->max_deph = value;
+                sscanf(*buf, "%d\n", &(image->max_deph));
                 break;
         }
 
@@ -75,13 +67,18 @@ static int scann_image_properties(image_t image, FILE * inputfile, char * * buf,
 static int load_ascii_pgm(image_t image, FILE * inputfile)
 {
     unsigned int i, j;
+    int value;
     debug_print(LVL_INFO, "Scanning ascii file %p.\n", inputfile);
     for (i = 0; i < image->height; ++i)
+    {
         for (j = 0; j < image->width; ++j)
         {
-            if (fscanf(inputfile, "%c", &(image->image_mono[i][j])) == EOF)
+            if (fscanf(inputfile, "%d", &(value)) == EOF)
                 return -1;
+            image->image_mono[i][j] = (uint8_t)value;
         }
+        fscanf(inputfile, "\n");
+    }
     debug_print(LVL_INFO, "Scanned successfully file %p.\n", inputfile);
     return 0;
 }
@@ -92,23 +89,19 @@ static int load_binary_pgm(image_t image, FILE * inputfile, char * * buf,
     int i, j;
     size_t read;
     debug_print(LVL_INFO, "Scanning binnary file %p.\n", inputfile);
+    if ((buf == NULL) || ((*bufsize) < image->width))
+    {
+        (*buf) = realloc((*buf), image->width + 1);
+        (*bufsize) = image->width;
+    }
     for (i = 0; i < image->height;)
     {
-        if ((read = getline(buf, bufsize, inputfile)) == -1)
+        if ((read = fread(*buf, sizeof(uint8_t), *bufsize, inputfile)) == -1)
             return -1;
-
-        if ((*buf)[0] == '#')
-        {
-            debug_print(LVL_INFO, "comment:%s", (*buf));
-            continue;
-        }
-
-        if (read == 0)
-            continue;
 
         if (read != image->width)
         {
-            debug_print(LVL_INFO, "Row length %d\n", (int)read);
+            debug_print(LVL_WARNING, "Read %d\n", (int)read);
             return -1;
         }
 
@@ -165,7 +158,6 @@ image_t load_image_from_file(const char * filename)
             goto MALLOC_ERR;
     }
 
-    debug_print(LVL_INFO, "Next line %p %p %p\n", image, image->image_mono, image->image_mono[0]);
     // Load pixels. (2 types of pgm file, binary or ascii).
     if (pgm_type == PGM_ASCII)
     {
@@ -208,6 +200,7 @@ MALLOC_ERR:
 image_t copy_image(image_t image)
 {
     int i, j;
+
     image_t new_image = (image_t)malloc(sizeof (struct _image_t));
     new_image->width = image->width;
     new_image->height = image->height;
@@ -269,7 +262,6 @@ void save_image_to_file(image_t image, const char * filename)
     for (i = 0; i < image->height; ++i)
     {
         fwrite(image->image_mono[i], sizeof(uint8_t), image->width, output);
-        fputc((int)'\n', output);
     }
 }
 
