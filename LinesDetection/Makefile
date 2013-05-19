@@ -29,7 +29,7 @@ endif
 
 AFLAGS=-Wall -Werror -c $(OPTDBG)
 CFLAGS=-Wall -Werror -c $(OPTDBG)
-LFLAGS=-Wall -Werror $(OPTDBG)
+LFLAGS=-Wall -Werror $(OPTDBG) -lm
 
 all : $(PROJECT)
 

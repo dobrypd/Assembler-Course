@@ -7,6 +7,8 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
+#include <stdio.h>
+
 #ifndef NDEBUG
 #ifndef DBGLVL
 #define DBGLVL 1

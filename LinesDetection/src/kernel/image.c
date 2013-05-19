@@ -255,6 +255,7 @@ void save_image_to_file(image_t image, const char * filename)
     {
         debug_print(LVL_ERROR, "malloc error%c", '\n');
         fputs("cannot create or open output file\n", stderr);
+        return;
     }
 
     fprintf(output, "P5\n%d %d\n%d\n", image->width, image->height,
@@ -263,6 +264,8 @@ void save_image_to_file(image_t image, const char * filename)
     {
         fwrite(image->image_mono[i], sizeof(uint8_t), image->width, output);
     }
+
+    fclose(output);
 }
 
 void free_image(image_t image)

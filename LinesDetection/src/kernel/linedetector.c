@@ -164,10 +164,12 @@ int main(int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
     if (global_args.verbosity > 0)
-        printf("Loaded %s.\n", global_args.input_filename);
+        printf("Loaded %s.\nBeggining line detection.\n",
+                global_args.input_filename);
 
     lines_t lines;
-    lines = detect_lines(image);
+    lines = detect_lines(image, global_args.min_line_length,
+            global_args.out_filename == NULL);
     if (check_lines(lines) != DETECTION_STATUS_OK)
     {
         free_image(image);
@@ -175,6 +177,9 @@ int main(int argc, char * argv[])
         fputs("Cannot continue: error while detecting lines.\n\n", stderr);
         exit(EXIT_FAILURE);
     }
+
+    if (global_args.verbosity > 0)
+        printf("Detected %d lines.\n", lines_how_many(lines));
 
     if (global_args.output_format == NETPBM)
     {
