@@ -154,7 +154,10 @@ image_t load_image_from_file(const char * filename)
     {
         image->image_mono[i] = (uint8_t *)malloc(sizeof(uint8_t) * image->width);
         if (image->image_mono[i] == NULL)
+        {
+            fclose(inputfile);
             goto MALLOC_ERR;
+        }
     }
 
     // Load pixels. (2 types of pgm file, binary or ascii).
@@ -190,7 +193,6 @@ FORMAT_ERR:
 MALLOC_ERR:
     if (buf != NULL)
         free(buf);
-    fclose(inputfile);
     free_image(image);
     fputs("malloc error\n", stderr);
     return NULL;
