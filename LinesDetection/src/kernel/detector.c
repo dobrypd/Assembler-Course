@@ -14,7 +14,7 @@
 
 
 lines_t detect_lines(image_t image, unsigned int minimal_line_length,
-        uint8_t threshold, int return_outputs_on_stdout)
+        uint8_t threshold, float sigma, int return_outputs_on_stdout)
 {
     debug_print(LVL_INFO, "Detecting lines %p\n", image);
     lines_t lines = (lines_t)malloc(sizeof(struct _lines_t));
@@ -31,7 +31,8 @@ lines_t detect_lines(image_t image, unsigned int minimal_line_length,
     lines->end_y = NULL;
 
     find_lines(get_raw_image_mono_8(image), image->width, image->height, lines,
-            &add_line, minimal_line_length, threshold, return_outputs_on_stdout);
+            &add_line, minimal_line_length, threshold, sigma,
+            return_outputs_on_stdout);
 
     return lines;
 }

@@ -7,11 +7,11 @@
 #define _GNU_SOURCE
 
 #include <math.h>
-//XXX:
-#include <stdio.h>
 
+#include "image_operations.h"
 #include "image.h"
 #include "engine.h"
+#include "config.h"
 
 #ifndef max
 #define max(a,b) (((a) > (b)) ? (a) : (b))
@@ -20,11 +20,14 @@
 
 #define WHITE 255
 #define BLACK 0
+#define GAUSS_SIZE 9
 
 void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output,
         int width, int height, int kernel_width, int kernel_height,
         kernel_t kernel)
 {
+    debug_print(LVL_INFO, "Adding mask size: %dx%d\n", kernel_height,
+            kernel_width);
     int i, j;
     int kern_i, kern_j;
     int ii, jj;
@@ -95,6 +98,8 @@ void add_combinated_masks(raw_image_mono_8_t input, raw_image_mono_8_t output,
         kernel_t kernel1, kernel_t kernel2,
         uint8_t(*combinator)(long, long))
 {
+    debug_print(LVL_INFO, "Combinating masks: %dx%d\n", kernel_height,
+            kernel_width);
     int i, j;
     int kern_i, kern_j;
     int ii, jj;
@@ -161,7 +166,7 @@ void thresholding(raw_image_mono_8_t input,raw_image_mono_8_t output,
 {
     int i, j;
 
-    printf("Thresholding %d\n", threshold);
+    debug_print(LVL_INFO, "Thresholding: %d\n", threshold);
 
     for (i = 0; i < height; ++i)
         for (j = 0; j < width; ++j)
@@ -171,7 +176,7 @@ void thresholding(raw_image_mono_8_t input,raw_image_mono_8_t output,
 void find_lines(raw_image_mono_8_t raw_image, int width, int height,
         lines_t lines, void (*f_add_line) (lines_t, unsigned int, unsigned int,
                 unsigned int, unsigned  int), unsigned int minimal_line_length,
-        uint8_t threshold, int return_outputs_on_stdout)
+        uint8_t threshold, float sigma, int return_outputs_on_stdout)
 {
     raw_image_mono_8_t copy = copy_raw(raw_image, width, height);
     if (copy == NULL)
@@ -185,21 +190,18 @@ void find_lines(raw_image_mono_8_t raw_image, int width, int height,
              1,  0, -1,
              2,  0, -2,
              1,  0, -1);
-    kernel_t gaussian_smooth = new_kernel(5, 5,
-             1,  4,  7,  4,  1,
-             4, 16, 26, 16,  4,
-             7, 26, 41, 26,  7,
-             4, 16, 26, 16,  4,
-             1,  4,  7,  4,  1);
+
+    kernel_t gaussian_smooth = new_gaussian(GAUSS_SIZE, sigma);
     kernel_t copying_kernel = new_kernel(1, 1, 1);
 
-    add_mask(copy, raw_image, width, height, 5, 5, gaussian_smooth);
+    add_mask(copy, raw_image, width, height, GAUSS_SIZE, GAUSS_SIZE, gaussian_smooth);
     add_combinated_masks(raw_image, copy, width, height, 3, 3, sobel1, sobel2,
             *square_root_combinator);
 
     thresholding(copy, raw_image, width, height, threshold);
 
     // Line detection. (Sth like Hough transform).
+
 
 
     free_kernel(sobel1, 3);

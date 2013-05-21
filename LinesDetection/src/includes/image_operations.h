@@ -19,5 +19,9 @@
 extern void add_lines_to_image(image_t image, lines_t lines, uint8_t color_line,
         uint8_t color_bg);
 
+/*
+ * New Gaussian kernel.
+ */
+extern kernel_t new_gaussian(int size, float sigma);
 
 #endif /* IMAGE_OPERATIONS_H_ */

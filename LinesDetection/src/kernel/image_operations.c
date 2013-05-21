@@ -56,3 +56,46 @@ void add_lines_to_image(image_t image, lines_t lines, uint8_t color_line,
         }
     }
 }
+
+static double calc_gauss(int x, int y, float sigma)
+{
+    double counter;
+    double denominator;
+
+    counter = pow(M_E, -((x*x + y*y) / (2 * sigma * sigma)));
+    denominator = (2 * M_PI * sigma * sigma);
+
+    return counter / denominator;
+}
+
+kernel_t new_gaussian(int size, float sigma)
+{
+    int i, j;
+
+    debug_print(LVL_INFO, "New gauss kernel, size %d, sigma %f.\n", size,
+        sigma);
+
+    kernel_t kernel = (kernel_t)malloc(sizeof(int *) * size);
+    if (kernel == NULL)
+    {
+        fputs("malloc error\n", stderr);
+        return NULL;
+    }
+
+    for (i = 0; i < size; ++i)
+    {
+        kernel[i] = (int *) malloc(sizeof(int) * size);
+        if (kernel[i] == NULL)
+        {
+            free_kernel(kernel, size);
+            fputs("malloc error\n", stderr);
+            return NULL ;
+        }
+
+        for (j = 0; j < size; ++j)
+        {
+            kernel[i][j] = calc_gauss(i - (size / 2), j - (size / 2), sigma) * size * 100;
+        }
+    }
+    return kernel;
+}
