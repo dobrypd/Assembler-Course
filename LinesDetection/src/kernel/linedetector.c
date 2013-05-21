@@ -19,6 +19,7 @@
 static const char * version_no = "0.0.alpha";
 static const char * default_output_filename = "out";
 static const int default_minimum_line_length = 25;
+static const int default_threshold = 40;
 
 enum output_format_t
 {
@@ -28,6 +29,7 @@ enum output_format_t
 
 static struct global_args_t {
     unsigned int min_line_length;
+    uint8_t threshold;
     enum output_format_t output_format;
     const char *out_filename;
     int verbosity;
@@ -46,6 +48,7 @@ enum
 
 static const struct option long_options[] = {
     { "min-line-len", no_argument, NULL, 'm' },
+    { "threshold", no_argument, NULL, 't' },
     { "pgm-format", no_argument, NULL, 'f' },
     { "output", required_argument, NULL, 'o' },
     { "verbose", no_argument, NULL, 'v' },
@@ -66,6 +69,7 @@ static void version();
 static void initialize_global_args()
 {
     global_args.min_line_length = default_minimum_line_length;
+    global_args.threshold = default_threshold;
     global_args.output_format = TEXTFILE;
     global_args.out_filename = NULL;
     global_args.verbosity = 0;
@@ -81,7 +85,7 @@ static void parse_args(int argc, char * argv[])
     while (1)
     {
         int oi = -1;
-        opt = getopt_long(argc, argv, "m:fo:v", long_options, &oi);
+        opt = getopt_long(argc, argv, "m:t:fo:v", long_options, &oi);
         if (opt == -1)
             break;
 
@@ -89,11 +93,18 @@ static void parse_args(int argc, char * argv[])
         {
         unsigned long int tmp_ulong;
         case 'm':
-            if (((tmp_ulong = strtoul (optarg, NULL, 0)) == 0)
+            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == 0)
                     || (tmp_ulong > UINT_MAX))
                 usage(EXIT_FAILURE);
             global_args.min_line_length = tmp_ulong;
             debug_print(LVL_INFO, "Setting minimal len to %lu\n", tmp_ulong);
+            break;
+        case 't':
+            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == 0)
+                    || (tmp_ulong > UCHAR_MAX))
+                usage(EXIT_FAILURE);
+            global_args.threshold = tmp_ulong;
+            debug_print(LVL_INFO, "Setting threshold to %lu\n", tmp_ulong);
             break;
         case 'f':
             global_args.output_format = NETPBM;
@@ -169,7 +180,7 @@ int main(int argc, char * argv[])
 
     lines_t lines;
     lines = detect_lines(image, global_args.min_line_length,
-            global_args.out_filename == NULL);
+            global_args.threshold, global_args.out_filename == NULL);
     if (check_lines(lines) != DETECTION_STATUS_OK)
     {
         free_image(image);
@@ -232,6 +243,8 @@ Input FILE must be Netpbm grayscale image.\n\
 \n\
 Mandatory arguments to long options are mandatory for short options too.\n\
   -m, --min-line-len SIZE    declare minimum length of all lines\n\
+  -t, --threshold COLOR      declare threshold in edge detection\n\
+                               from [0, 256), default=40\n\
   -f, --pgm-format           output as Netpbm file, instead of textfile\n\
       --line-color COLOR     set color of the lines,\n\
                                only with --pgm-format, default=255\n\

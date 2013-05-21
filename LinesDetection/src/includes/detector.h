@@ -33,7 +33,7 @@ typedef struct _lines_t * lines_t;
  * Allocating lines.
  */
 extern lines_t detect_lines(image_t image, unsigned int minimal_line_length,
-        int return_outputs_on_stdout);
+        uint8_t threshold, int return_outputs_on_stdout);
 
 /*
  * Check if lines exists. Try to check if detection works.
