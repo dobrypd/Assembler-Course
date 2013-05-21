@@ -18,6 +18,7 @@ enum image_file_type
     NETPBM_PGM
 };
 
+typedef int * * kernel_t;
 typedef uint8_t * * raw_image_mono_8_t;
 struct _image_t
 {
@@ -59,5 +60,28 @@ extern void save_image_to_file(image_t image, const char * filename);
  * Frees image.
  */
 extern void free_image(image_t image);
+
+/*
+ * Frees raw monochromatic image.
+ */
+extern void free_kernel(kernel_t raw, int height);
+extern void free_raw(raw_image_mono_8_t raw, int height);
+
+/*
+ * Copying raw monochromatic image.
+ */
+extern raw_image_mono_8_t copy_raw(raw_image_mono_8_t raw_image, int width,
+        int height);
+
+/*
+ * Returns new kernel (mask).
+ * ie.
+ * -1  0  1
+ *  1  2  3
+ * -2  3  5
+ * could be create by
+ * raw_image_mono_8_t mask = new_kernel(3, 3, -1, 0, 1, 1, 2, 3, -2, 3, 5);
+ */
+extern kernel_t new_kernel(int width, int height, ...);
 
 #endif /* IMAGE_H_ */

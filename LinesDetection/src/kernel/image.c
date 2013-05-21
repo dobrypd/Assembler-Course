@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdarg.h>
 
 #include "config.h"
 #include "image.h"
@@ -200,37 +201,18 @@ MALLOC_ERR:
 
 image_t copy_image(image_t image)
 {
-    int i, j;
-
     image_t new_image = (image_t)malloc(sizeof (struct _image_t));
     new_image->width = image->width;
     new_image->height = image->height;
     new_image->max_deph = image->max_deph;
     new_image->type = image->type;
 
-    new_image->image_mono = (raw_image_mono_8_t)malloc(sizeof(uint8_t *) * image->height);
+    new_image->image_mono = copy_raw(image->image_mono, image->width,
+            image->height);
     if (new_image->image_mono == NULL )
     {
         free_image(new_image);
-        fputs("malloc error\n", stderr);
         return NULL;
-    }
-
-    for (i = 0; i < image->height; ++i)
-    {
-        new_image->image_mono[i] = (uint8_t *) malloc(
-                sizeof(uint8_t) * image->width);
-        if (new_image->image_mono[i] == NULL )
-        {
-            free_image(new_image);
-            fputs("malloc error\n", stderr);
-            return NULL ;
-        }
-
-        for (j = 0; j < image->width; ++j)
-        {
-            new_image->image_mono[i][j] = image->image_mono[i][j];
-        }
     }
 
     return new_image;
@@ -271,23 +253,110 @@ void save_image_to_file(image_t image, const char * filename)
 
 void free_image(image_t image)
 {
-    int i;
     if (image != NULL)
     {
-        if (image->image_mono != NULL)
-        {
-            for (i = 0; i < image->height; ++i)
-            {
-                if (image->image_mono[i] != NULL)
-                {
-                    free(image->image_mono[i]);
-                    image->image_mono[i] = NULL;
-                }
-            }
-            free(image->image_mono);
-            image->image_mono = NULL;
-        }
+        free_raw(image->image_mono, image->height);
         free(image);
         image = NULL;
     }
+}
+
+void free_raw(raw_image_mono_8_t raw, int height)
+{
+    int i;
+    if (raw != NULL)
+    {
+        for (i = 0; i < height; ++i)
+        {
+            if (raw[i] != NULL)
+            {
+                free(raw[i]);
+                raw[i] = NULL;
+            }
+        }
+        free(raw);
+    }
+}
+
+void free_kernel(kernel_t raw, int height)
+{
+    int i;
+    if (raw != NULL)
+    {
+        for (i = 0; i < height; ++i)
+        {
+            if (raw[i] != NULL)
+            {
+                free(raw[i]);
+                raw[i] = NULL;
+            }
+        }
+        free(raw);
+    }
+}
+
+raw_image_mono_8_t copy_raw(raw_image_mono_8_t raw_image, int width,
+        int height)
+{
+    int i, j;
+    raw_image_mono_8_t new_raw;
+    new_raw = (raw_image_mono_8_t)malloc(sizeof(uint8_t *) * height);
+    if (new_raw == NULL)
+    {
+        fputs("malloc error\n", stderr);
+        return NULL;
+    }
+
+    for (i = 0; i < height; ++i)
+    {
+        new_raw[i] = (uint8_t *) malloc(sizeof(uint8_t) * width);
+        if (new_raw[i] == NULL)
+        {
+            free_raw(new_raw, height);
+            fputs("malloc error\n", stderr);
+            return NULL ;
+        }
+
+        for (j = 0; j < width; ++j)
+        {
+            new_raw[i][j] = raw_image[i][j];
+        }
+    }
+
+    return new_raw;
+}
+
+kernel_t new_kernel(int width, int height, ...)
+{
+    va_list arguments;
+    int i, j;
+
+    va_start(arguments, height);
+
+    kernel_t kernel = (kernel_t)malloc(sizeof(int *) * height);
+    if (kernel == NULL)
+    {
+        fputs("malloc error\n", stderr);
+        va_end(arguments);
+        return NULL;
+    }
+
+    for (i = 0; i < height; ++i)
+    {
+        kernel[i] = (int *) malloc(sizeof(int) * width);
+        if (kernel[i] == NULL)
+        {
+            free_kernel(kernel, height);
+            va_end(arguments);
+            fputs("malloc error\n", stderr);
+            return NULL ;
+        }
+
+        for (j = 0; j < width; ++j)
+        {
+            kernel[i][j] = va_arg(arguments, int);
+        }
+    }
+    va_end(arguments);
+    return kernel;
 }

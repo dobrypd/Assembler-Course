@@ -1,4 +1,8 @@
-// XXX: implementation
+/*
+ * Detecting lines will be separated into two operations,
+ *   Fist one will find edges in input
+ *   Second will search for lines using Hough Transform
+ */
 
 
 //warning "EVEN MOCK IS NOT IMPLEMENTED"
@@ -30,6 +34,6 @@ find_lines:
 .L3:
     .word   stdout
     .word   .LC0
-    .size   main, .-main
-    .ident  "GCC: (Debian 4.3.2-1.1) 4.3.2"
+    .size   find_lines, .-find_lines
+    .ident  "Piotr Dobrowolski"
     .section    .note.GNU-stack,"",%progbits

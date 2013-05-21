@@ -196,8 +196,9 @@ int main(int argc, char * argv[])
             fputs("Cannot continue: error while copying image.\n\n", stderr);
             exit(EXIT_FAILURE);
         }
-        add_lines_to_image(output_image, lines, global_args.color_line,
-                global_args.color_bg);
+        // XXX: Commented for testing purpose. Uncomment it!
+        //add_lines_to_image(output_image, lines, global_args.color_line,
+        //        global_args.color_bg);
         save_image_to_file(output_image, ((global_args.out_filename == NULL)
                 ? (default_output_filename) : (global_args.out_filename)));
         free_image(output_image);
