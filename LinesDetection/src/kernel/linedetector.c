@@ -17,10 +17,11 @@
 #include "image_operations.h"
 
 static const char * version_no = "0.0.alpha";
-static const char * default_output_filename = "out";
+static const char * default_output_filename = "out.pgm";
 static const int default_minimum_line_length = 25;
 static const int default_threshold = 40;
 static const float default_sigma = 1.0;
+static const int default_radius = 4;
 
 enum output_format_t
 {
@@ -32,6 +33,7 @@ static struct global_args_t {
     unsigned int min_line_length;
     uint8_t threshold;
     float sigma;
+    int radius;
     enum output_format_t output_format;
     const char *out_filename;
     int verbosity;
@@ -52,6 +54,7 @@ static const struct option long_options[] = {
     { "min-line-len", no_argument, NULL, 'm' },
     { "threshold", no_argument, NULL, 't' },
     { "sigma", no_argument, NULL, 's' },
+    { "radius", no_argument, NULL, 'r' },
     { "pgm-format", no_argument, NULL, 'f' },
     { "output", required_argument, NULL, 'o' },
     { "verbose", no_argument, NULL, 'v' },
@@ -74,12 +77,13 @@ static void initialize_global_args()
     global_args.min_line_length = default_minimum_line_length;
     global_args.threshold = default_threshold;
     global_args.sigma = default_sigma;
+    global_args.radius = default_radius;
     global_args.output_format = TEXTFILE;
     global_args.out_filename = NULL;
     global_args.verbosity = 0;
     global_args.input_filename = NULL;
-    global_args.color_line = 255;
-    global_args.color_bg = 0;
+    global_args.color_line = 150;
+    global_args.color_bg = -1;
 }
 
 static void parse_args(int argc, char * argv[])
@@ -89,7 +93,7 @@ static void parse_args(int argc, char * argv[])
     while (1)
     {
         int oi = -1;
-        opt = getopt_long(argc, argv, "m:t:s:fo:v", long_options, &oi);
+        opt = getopt_long(argc, argv, "m:t:s:r:fo:v", long_options, &oi);
         if (opt == -1)
             break;
 
@@ -112,10 +116,17 @@ static void parse_args(int argc, char * argv[])
             debug_print(LVL_INFO, "Setting threshold to %lu\n", tmp_ulong);
             break;
         case 's':
-            if ((tmp_float = strtof(optarg, NULL)) == 0)
+            if ((tmp_float = strtod(optarg, NULL)) == 0)
                 usage(EXIT_FAILURE);
             global_args.sigma = tmp_float;
             debug_print(LVL_INFO, "Setting sigma to %f\n", tmp_float);
+            break;
+        case 'r':
+            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == 0)
+                    || (tmp_ulong > UCHAR_MAX))
+                usage(EXIT_FAILURE);
+            global_args.radius = tmp_ulong;
+            debug_print(LVL_INFO, "Setting radius to %lu\n", tmp_ulong);
             break;
         case 'f':
             global_args.output_format = NETPBM;
@@ -191,7 +202,7 @@ int main(int argc, char * argv[])
 
     lines_t lines;
     lines = detect_lines(image, global_args.min_line_length,
-            global_args.threshold, global_args.sigma,
+            global_args.threshold, global_args.sigma, global_args.radius,
             global_args.out_filename == NULL);
     if (check_lines(lines) != DETECTION_STATUS_OK)
     {
@@ -209,22 +220,11 @@ int main(int argc, char * argv[])
         debug_print(LVL_INFO, "Saving pgm %s\n", global_args.out_filename);
         if (global_args.verbosity > 0)
             printf("Will save pgm file in %s.\n", global_args.out_filename);
-        image_t output_image;
-        output_image = copy_image(image);
-        if (check_image(output_image) != IMAGE_STATUS_OK)
-        {
-            free_image(image);
-            free_image(output_image);
-            free_lines(lines);
-            fputs("Cannot continue: error while copying image.\n\n", stderr);
-            exit(EXIT_FAILURE);
-        }
         // XXX: Commented for testing purpose. Uncomment it!
-        //add_lines_to_image(output_image, lines, global_args.color_line,
-        //        global_args.color_bg);
-        save_image_to_file(output_image, ((global_args.out_filename == NULL)
+        add_lines_to_image(image, lines, global_args.color_line,
+                global_args.color_bg);
+        save_image_to_file(image, ((global_args.out_filename == NULL)
                 ? (default_output_filename) : (global_args.out_filename)));
-        free_image(output_image);
     }
     else if (global_args.out_filename != NULL)
     {
@@ -247,11 +247,19 @@ static void usage(int status)
 {
     printf("Usage: %s [OPTION]... FILE\n", program_name);
     fputs("\
-Find all lines in monochromatic picture. If non of --pgm_format, or --output\n\
+  Find all lines in monochromatic picture. If non of --pgm_format, or --output\n\
 declared it returns list of pairs, (point_start, point_stop).\n\
 Where point_start, and point_stop are pairs of integers.\n\
 \n\
-Input FILE must be Netpbm grayscale image.\n\
+  Input FILE must be Netpbm grayscale image.\n\
+\n\
+  Few words about used algorithm: firstly, to reduce noise, is used\n\
+Gaussian blur filter. You can change arguments of this smoothing:\n\
+sigma, and radius.\n\
+After this operation thresholding will be applied. You can change value of\n\
+threshold color.\n\
+Last step is to do the Hough Transform, and find lines (sections).\n\
+You can change the minimum length of segment to find.\n\
 \n\
 Mandatory arguments to long options are mandatory for short options too.\n\
   -m, --min-line-len SIZE    declare minimum length of all lines\n\
@@ -259,13 +267,17 @@ Mandatory arguments to long options are mandatory for short options too.\n\
                                from [0, 256), default=40\n\
   -s, --sigma VALUE          set float value of Gaussian kernel\n\
                                default=1.0\n\
+  -r, --radius VALUE         set radius of Gaussian kernel\n\
+                               default=4\n\
   -f, --pgm-format           output as Netpbm file, instead of textfile\n\
       --line-color COLOR     set color of the lines,\n\
                                only with --pgm-format, default=255\n\
       --bg-color COLOR       set the color of background,\n\
-                               only with --pgm-format, default=0\n\
+                               only with --pgm-format, default=-1\n\
+                               (transparent to original image)\n\
   -o, --output FILE          save in filename, if exists will be override\n\
-                               (out.txt or out.pgm by default)\n\
+                               (out.pgm by default, if not set and without -f\n\
+                               then lines will be returned to stdout)\n\
   -v, --verbose              increase verbosity\n\
       --help                 display this help and exit\n\
       --version              output version information and exit\n\
