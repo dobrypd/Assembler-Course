@@ -90,6 +90,9 @@ static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output, int wi
 
 static inline int calc_angle(long val1, long val2)
 {
+    /*
+     * From http://www.pages.drexel.edu/~nk752/cannyTut2.html
+     */
     double this_angle;
     uint8_t new_angle;
     // Calculate actual direction of edge
@@ -109,7 +112,6 @@ static inline int calc_angle(long val1, long val2)
 }
 static void edge_gradient(raw_image_mono_8_t input, raw_image_mono_8_t output,
         raw_image_mono_8_t angles, int width, int height)
-// TODO: gradients
 {
     const int sobel_kernel_size = 3;
     const int sobel_kernel_center = sobel_kernel_size / 2;
@@ -206,11 +208,11 @@ static void suppress_non_max_edges(raw_image_mono_8_t input,
 
 static inline int fy(int x, double a, double r)
 {
-    return -x * (cos(a)) / sin(a) + r / sin(a);
+    return -(double)x * (cos(a)) / sin(a) + r / sin(a);
 }
 static inline int fx(int y, double a, double r)
 {
-    return -y * (sin(a)) / cos(a) + r / cos(a);
+    return -(double)y * (sin(a)) / cos(a) + r / cos(a);
 }
 static inline void get_max_distance(double * max_distance, int * horizontally,
         int width, int height, double angle)
@@ -224,53 +226,82 @@ static inline void get_max_distance(double * max_distance, int * horizontally,
     else if (angle <= M_PI)
     {
         *max_distance = height * cos(angle - M_PI_2);
-        *horizontally = (angle <= ((3 / 4) * M_PI));
+        *horizontally = (angle <= ((3.0 / 4.0) * M_PI));
     }
     else
     {
         *max_distance = width * cos(2 * M_PI - angle);
-        *horizontally = (angle <= ((7 / 4) * M_PI));
+        *horizontally = (angle <= ((7.0 / 4.0) * M_PI));
     }
+    debug_print(LVL_LOWEST, "Angle %f, max distance %f, is %s horizontally\n",
+            angle * 180.0 / M_PI, *max_distance, (*horizontally) ? "" : "not");
 }
 static inline void get_extrema(int * x_min, int * x_max,
         int * y_min, int * y_max, double a, double r, int width, int height)
 {
-    // Minimums
-    if (fy(0, a, r) < 0)
+    // x
+    if (fy(0, a, r) <= 0)
     {
         *x_min = fx(0, a, r);
-        *y_min = 0;
     }
     else if (fy(0, a, r) < height)
     {
         *x_min = 0;
-        *y_min = fy(0, a, r);
     }
     else // y > h
     {
         *x_min = fx(height, a, r);
-        *y_min = height;
     }
-    // Maximums
-    if (fy(width, a, r) < 0)
+
+    if (fy(width, a, r) <= 0)
     {
         *x_max = fx(0, a, r);
-        *y_max = 0;
     }
     else if (fy(width, a, r) < height)
     {
         *x_max = width;
-        *y_max = fy(width, a, r);
     }
     else // y > h
     {
         *x_max = fx(height, a, r);
+    }
+
+    *x_min = max(*x_min, 0);
+    *x_max = min(*x_max, width);
+
+    // y
+    if (fx(0, a, r) <= 0)
+    {
+        *y_min = fy(0, a, r);
+    }
+    else if (fy(0, a, r) < width)
+    {
+        *y_min = 0;
+    }
+    else // x > w
+    {
+        *y_min = fx(width, a, r);
+    }
+
+    if (fx(height, a, r) <= 0)
+    {
+        *y_max = fy(0, a, r);
+    }
+    else if (fx(height, a, r) < width)
+    {
         *y_max = height;
     }
-    *x_min = max(*x_min, 0);
-    *y_min = min(max(*y_min, 0), height);
-    *x_max = min(*x_max, width);
-    *y_max = min(max(*y_min, 0), height);
+    else // x > w
+    {
+        *y_max = fy(width, a, r);
+    }
+
+    *y_min = max(*y_min, 0);
+    *y_max = min(*y_max, height);
+
+    debug_print(LVL_LOWEST,
+            "Extremas: a %f r %f: y_min %d x_min %d y_max %d x_max %d\n",
+            a * 180.0 / M_PI, r, *y_min, *x_min, *y_max, *x_max);
 }
 static inline double len(int x1, int y1, int x2, int y2)
 {
@@ -289,13 +320,13 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
     double distance; // distance between line and point (0, 0)
     double max_distance; // maximum distance for current angle
     int x_min, x_max, x, y_min, y_max, y;
-    double angle_component = (2 * M_PI) / 1000; // TODO: try to do the math
+    double angle_component = (2.0 * M_PI) / 1000.0; // TODO: try to do the math
     // Found line
     int begin_x, begin_y, end_x, end_y;
 
     for (angle = 0; angle < 2 * M_PI; angle += angle_component)
     {
-        if (angle >= M_PI)
+        if ((angle >= M_PI) && (angle < (3.0/2.0) * M_PI))
         {
             angle += M_PI_2; // Third part has max_distance always equals 0
             continue;
@@ -372,10 +403,9 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
                 if (begin_y > -1)
                     if (len(begin_x, begin_y, end_x, end_y) > minimal_line_length)
                         add_line(lines, begin_x, begin_y, end_x, end_y);
-            }
-
-        }
-    }
+            } /* horizontal / vertival */
+        } /* distance */
+    } /* angle */
 }
 
 void find_lines(raw_image_mono_8_t raw_image, int width, int height,
@@ -418,6 +448,7 @@ void find_lines(raw_image_mono_8_t raw_image, int width, int height,
     debug_print(LVL_INFO, "Phase 4: find line segments...%c", '\n');
     find_segments(image_tmp2, width, height, lines, f_add_line,
             minimal_line_length);
+
 
     free_raw(image_tmp1, height);
     free_raw(image_tmp2, height);
