@@ -20,6 +20,31 @@
 #define PGM_BIN 5
 
 
+extern raw_image_mono_8_t alloc_raw(int width, int height)
+{
+    int i;
+    raw_image_mono_8_t new_raw;
+    new_raw = (raw_image_mono_8_t)malloc(sizeof(uint8_t *) * height);
+    if (new_raw == NULL)
+    {
+        fputs("malloc error\n", stderr);
+        return NULL;
+    }
+
+    for (i = 0; i < height; ++i)
+    {
+        new_raw[i] = (uint8_t *) malloc(sizeof(uint8_t) * width);
+        if (new_raw[i] == NULL)
+        {
+            free_raw(new_raw, height);
+            fputs("malloc error\n", stderr);
+            return NULL ;
+        }
+    }
+
+    return new_raw;
+}
+
 static int scann_image_properties(image_t image, FILE * inputfile, char * * buf,
         size_t * bufsize)
 {
@@ -121,7 +146,6 @@ image_t load_image_from_file(const char * filename)
     char * buf = NULL;
     size_t bufsize;
     int pgm_type = -1;
-    int i;
     debug_print(LVL_INFO, "Loading image from file %s.\n", filename);
 
     // Alloc buffer and image structure).
@@ -148,18 +172,9 @@ image_t load_image_from_file(const char * filename)
     }
 
     // Alloc raw image.
-    image->image_mono = (raw_image_mono_8_t)malloc(sizeof(uint8_t *) * image->height);
+    image->image_mono = alloc_raw(image->width, image->height);
     if (image->image_mono == NULL)
         goto MALLOC_ERR;
-    for (i = 0; i < image->height; ++i)
-    {
-        image->image_mono[i] = (uint8_t *)malloc(sizeof(uint8_t) * image->width);
-        if (image->image_mono[i] == NULL)
-        {
-            fclose(inputfile);
-            goto MALLOC_ERR;
-        }
-    }
 
     // Load pixels. (2 types of pgm file, binary or ascii).
     if (pgm_type == PGM_ASCII)
@@ -299,27 +314,16 @@ raw_image_mono_8_t copy_raw(raw_image_mono_8_t raw_image, int width,
         int height)
 {
     int i, j;
-    raw_image_mono_8_t new_raw;
-    new_raw = (raw_image_mono_8_t)malloc(sizeof(uint8_t *) * height);
-    if (new_raw == NULL)
-    {
-        fputs("malloc error\n", stderr);
-        return NULL;
-    }
+    raw_image_mono_8_t new_raw = alloc_raw(width, height);
 
-    for (i = 0; i < height; ++i)
+    if (new_raw != NULL)
     {
-        new_raw[i] = (uint8_t *) malloc(sizeof(uint8_t) * width);
-        if (new_raw[i] == NULL)
+        for (i = 0; i < height; ++i)
         {
-            free_raw(new_raw, height);
-            fputs("malloc error\n", stderr);
-            return NULL ;
-        }
-
-        for (j = 0; j < width; ++j)
-        {
-            new_raw[i][j] = raw_image[i][j];
+            for (j = 0; j < width; ++j)
+            {
+                new_raw[i][j] = raw_image[i][j];
+            }
         }
     }
 

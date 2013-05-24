@@ -32,6 +32,11 @@ struct _image_t
 typedef struct _image_t * image_t;
 
 /*
+ * Allocating memory for monochromatic raw image.
+ */
+extern raw_image_mono_8_t alloc_raw(int width, int height);
+
+/*
  * Loading file from file, allocating necessary structures.
  */
 extern image_t load_image_from_file(const char * filename);
