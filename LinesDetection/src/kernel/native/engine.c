@@ -22,8 +22,8 @@
 #define WHITE 255
 #define BLACK 0
 
-static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output, int width,
-        int height, int kernel_size, kernel_t kernel)
+static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output,
+        int width, int height, int kernel_size, kernel_t kernel)
 {
     int i, j;
     int kern_i, kern_j;
@@ -87,7 +87,6 @@ static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output, int wi
     }
 }
 
-
 static inline int calc_angle(long val1, long val2)
 {
     /*
@@ -96,16 +95,20 @@ static inline int calc_angle(long val1, long val2)
     double this_angle;
     uint8_t new_angle;
     // Calculate actual direction of edge
-    this_angle = (atan2(val1, val2)/M_PI) * 180.0;
+    this_angle = (atan2(val1, val2) / M_PI) * 180.0;
 
     /* Convert actual edge direction to approximate value */
-    if ( ( (this_angle < 22.5) && (this_angle > -22.5) ) || (this_angle > 157.5) || (this_angle < -157.5) )
+    if (((this_angle < 22.5) && (this_angle > -22.5)) || (this_angle > 157.5)
+            || (this_angle < -157.5))
         new_angle = 0;
-    if ( ( (this_angle > 22.5) && (this_angle < 67.5) ) || ( (this_angle < -112.5) && (this_angle > -157.5) ) )
+    if (((this_angle > 22.5) && (this_angle < 67.5))
+            || ((this_angle < -112.5) && (this_angle > -157.5)))
         new_angle = 45;
-    if ( ( (this_angle > 67.5) && (this_angle < 112.5) ) || ( (this_angle < -67.5) && (this_angle > -112.5) ) )
+    if (((this_angle > 67.5) && (this_angle < 112.5))
+            || ((this_angle < -67.5) && (this_angle > -112.5)))
         new_angle = 90;
-    if ( ( (this_angle > 112.5) && (this_angle < 157.5) ) || ( (this_angle < -22.5) && (this_angle > -67.5) ) )
+    if (((this_angle > 112.5) && (this_angle < 157.5))
+            || ((this_angle < -22.5) && (this_angle > -67.5)))
         new_angle = 135;
 
     return new_angle;
@@ -194,25 +197,58 @@ static void thresholding(raw_image_mono_8_t input, raw_image_mono_8_t output,
             output[i][j] = (input[i][j] >= threshold) ? WHITE : BLACK;
 }
 
-static void suppress_non_max_edges(raw_image_mono_8_t input,
+static void suppress_non_max_d(raw_image_mono_8_t input,
         raw_image_mono_8_t output, raw_image_mono_8_t angles, int width,
-        int height)
+        int height, int row_shift, int col_shift, int i, int j, int dir,
+        uint8_t threshold)
 {
-    debug_print(LVL_ERROR, "\n\n\nNot implemented yet!\n\n%c", '\n');
-    int i, j;
-    for (i = 0; i < height; ++i)
-        for (j = 0; j < width; ++j)
-            output[i][j] = input[i][j];
 }
 
+static void suppress_non_max_edges(raw_image_mono_8_t input,
+        raw_image_mono_8_t output, raw_image_mono_8_t angles, int width,
+        int height, uint8_t threshold)
+{
+    int i, j;
+    for (i = 0; i < height; ++i)
+    {
+        for (j = 0; j < width; ++j)
+        {
+            if (input[i][j] == WHITE)
+            {
+                /* Switch based on current pixel's edge direction */
+                switch (angles[i][j])
+                {
+                case 0:
+                    suppress_non_max_d(input, output, angles, width, height, 1,
+                            0, i, j, 0, threshold);
+                    break;
+                case 45:
+                    suppress_non_max_d(input, output, angles, width, height, 1,
+                            -1, i, j, 45, threshold);
+                    break;
+                case 90:
+                    suppress_non_max_d(input, output, angles, width, height, 0,
+                            1, i, j, 90, threshold);
+                    break;
+                case 135:
+                    suppress_non_max_d(input, output, angles, width, height, 1,
+                            1, i, j, 135, threshold);
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
+    }
+}
 
 static inline int fy(int x, double a, double r)
 {
-    return -(double)x * (cos(a)) / sin(a) + r / sin(a);
+    return -(double) x * (cos(a)) / sin(a) + r / sin(a);
 }
 static inline int fx(int y, double a, double r)
 {
-    return -(double)y * (sin(a)) / cos(a) + r / cos(a);
+    return -(double) y * (sin(a)) / cos(a) + r / cos(a);
 }
 static inline void get_max_distance(double * max_distance, int * horizontally,
         int width, int height, double angle)
@@ -236,8 +272,8 @@ static inline void get_max_distance(double * max_distance, int * horizontally,
     debug_print(LVL_LOWEST, "Angle %f, max distance %f, is %s horizontally\n",
             angle * 180.0 / M_PI, *max_distance, (*horizontally) ? "" : "not");
 }
-static inline void get_extrema(int * x_min, int * x_max,
-        int * y_min, int * y_max, double a, double r, int width, int height)
+static inline void get_extrema(int * x_min, int * x_max, int * y_min,
+        int * y_max, double a, double r, int width, int height)
 {
     // x
     if (fy(0, a, r) <= 0)
@@ -320,13 +356,13 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
     double distance; // distance between line and point (0, 0)
     double max_distance; // maximum distance for current angle
     int x_min, x_max, x, y_min, y_max, y;
-    double angle_component = (2.0 * M_PI) / 1000.0; // TODO: try to do the math
+    double angle_component = (2.0 * M_PI) / 180.0;
     // Found line
     int begin_x, begin_y, end_x, end_y;
 
     for (angle = 0; angle < 2 * M_PI; angle += angle_component)
     {
-        if ((angle >= M_PI) && (angle < (3.0/2.0) * M_PI))
+        if ((angle >= M_PI) && (angle < (3.0 / 2.0) * M_PI))
         {
             angle += M_PI_2; // Third part has max_distance always equals 0
             continue;
@@ -361,14 +397,16 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
                     {
                         if (begin_x > -1)
                         {
-                            if (len(begin_x, begin_y, end_x, end_y) > minimal_line_length)
+                            if (len(begin_x, begin_y, end_x, end_y)
+                                    > minimal_line_length)
                                 add_line(lines, begin_x, begin_y, end_x, end_y);
                             begin_x = -1;
                         }
                     }
                 }
                 if (begin_x > -1)
-                    if (len(begin_x, begin_y, end_x, end_y) > minimal_line_length)
+                    if (len(begin_x, begin_y, end_x, end_y)
+                            > minimal_line_length)
                         add_line(lines, begin_x, begin_y, end_x, end_y);
             }
             else
@@ -394,14 +432,16 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
                     {
                         if (begin_y > -1)
                         {
-                            if (len(begin_x, begin_y, end_x, end_y) > minimal_line_length)
+                            if (len(begin_x, begin_y, end_x, end_y)
+                                    > minimal_line_length)
                                 add_line(lines, begin_x, begin_y, end_x, end_y);
                             begin_y = -1;
                         }
                     }
                 }
                 if (begin_y > -1)
-                    if (len(begin_x, begin_y, end_x, end_y) > minimal_line_length)
+                    if (len(begin_x, begin_y, end_x, end_y)
+                            > minimal_line_length)
                         add_line(lines, begin_x, begin_y, end_x, end_y);
             } /* horizontal / vertival */
         } /* distance */
@@ -420,12 +460,11 @@ void find_lines(raw_image_mono_8_t raw_image, int width, int height,
     kernel_t gaussian_smooth = new_gaussian(radius * 2 + 1, sigma);
 
     if ((image_tmp1 == NULL )|| (image_tmp2 == NULL) || (angles == NULL)
-            || (gaussian_smooth == NULL))
-    {
-        debug_print(LVL_ERROR,
-                "Cannot continue: error while creating objects.%c", '\n');
-        return;
-    }
+    || (gaussian_smooth == NULL)){
+    debug_print(LVL_ERROR,
+            "Cannot continue: error while creating objects.%c", '\n');
+    return;
+}
 
     // 1 - smoothing.
     debug_print(LVL_INFO, "Phase 1: smoothing...%c", '\n');
@@ -436,19 +475,19 @@ void find_lines(raw_image_mono_8_t raw_image, int width, int height,
     debug_print(LVL_INFO, "Phase 2: edge detection...%c", '\n');
     edge_gradient(image_tmp1, image_tmp2, angles, width, height);
 
-    // 3 - tresholding or trace along the edges. TODO: choose one.
-    debug_print(LVL_INFO, "Phase 2.5: thresholding...%c", '\n');
-    thresholding(image_tmp2, image_tmp1, width, height, threshold); // XXX: saves to raw image
-
     // 4 - suppress non-maximum edges.
     debug_print(LVL_INFO, "Phase 3: suppress non-maximum edges...%c", '\n');
-    suppress_non_max_edges(image_tmp1, image_tmp2, angles, width, height);
+    suppress_non_max_edges(image_tmp2, image_tmp1, angles, width, height,
+            threshold);
+
+    // 3 - tresholding or trace along the edges. TODO: choose one.
+    debug_print(LVL_INFO, "Phase 3.5: thresholding...%c", '\n');
+    thresholding(image_tmp2, image_tmp2, width, height, threshold);
 
     // 5 - find lines segments using Hough Transform.
     debug_print(LVL_INFO, "Phase 4: find line segments...%c", '\n');
     find_segments(image_tmp2, width, height, lines, f_add_line,
             minimal_line_length);
-
 
     free_raw(image_tmp1, height);
     free_raw(image_tmp2, height);
