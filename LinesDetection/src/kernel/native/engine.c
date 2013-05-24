@@ -7,6 +7,7 @@
 #define _GNU_SOURCE
 
 #include <math.h>
+#include <stdlib.h>
 
 #include "image_operations.h"
 #include "image.h"
@@ -86,8 +87,28 @@ static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output, int wi
     }
 }
 
+
+static inline int calc_angle(long val1, long val2)
+{
+    double this_angle;
+    uint8_t new_angle;
+    // Calculate actual direction of edge
+    this_angle = (atan2(val1, val2)/M_PI) * 180.0;
+
+    /* Convert actual edge direction to approximate value */
+    if ( ( (this_angle < 22.5) && (this_angle > -22.5) ) || (this_angle > 157.5) || (this_angle < -157.5) )
+        new_angle = 0;
+    if ( ( (this_angle > 22.5) && (this_angle < 67.5) ) || ( (this_angle < -112.5) && (this_angle > -157.5) ) )
+        new_angle = 45;
+    if ( ( (this_angle > 67.5) && (this_angle < 112.5) ) || ( (this_angle < -67.5) && (this_angle > -112.5) ) )
+        new_angle = 90;
+    if ( ( (this_angle > 112.5) && (this_angle < 157.5) ) || ( (this_angle < -22.5) && (this_angle > -67.5) ) )
+        new_angle = 135;
+
+    return new_angle;
+}
 static void edge_gradient(raw_image_mono_8_t input, raw_image_mono_8_t output,
-        raw_image_mono_8_t gradients, int width, int height)
+        raw_image_mono_8_t angles, int width, int height)
 // TODO: gradients
 {
     const int sobel_kernel_size = 3;
@@ -121,6 +142,7 @@ static void edge_gradient(raw_image_mono_8_t input, raw_image_mono_8_t output,
                 }
             }
             output[i][j] = sqrt(val1 * val1 + val2 * val2);
+            angles[i][j] = calc_angle(val1, val2);
         }
     }
 
@@ -150,6 +172,7 @@ static void edge_gradient(raw_image_mono_8_t input, raw_image_mono_8_t output,
                 }
             }
             output[i][j] = sqrt(val1 * val1 + val2 * val2);
+            angles[i][j] = calc_angle(val1, val2);
         }
     }
 
@@ -170,27 +193,32 @@ static void thresholding(raw_image_mono_8_t input, raw_image_mono_8_t output,
 }
 
 static void suppress_non_max_edges(raw_image_mono_8_t input,
-        raw_image_mono_8_t output, raw_image_mono_8_t gradients, int width,
+        raw_image_mono_8_t output, raw_image_mono_8_t angles, int width,
         int height)
 {
     debug_print(LVL_ERROR, "\n\n\nNot implemented yet!\n\n%c", '\n');
+    int i, j;
+    for (i = 0; i < height; ++i)
+        for (j = 0; j < width; ++j)
+            output[i][j] = input[i][j];
 }
 
 
-static inline int y(int x, double a, double r)
+static inline int fy(int x, double a, double r)
 {
     return -x * (cos(a)) / sin(a) + r / sin(a);
 }
-static inline int x(int y, double a, double r)
+static inline int fx(int y, double a, double r)
 {
     return -y * (sin(a)) / cos(a) + r / cos(a);
 }
-static inline void get_max_distance(double & max_distance, int & horizontally,
+static inline void get_max_distance(double * max_distance, int * horizontally,
         int width, int height, double angle)
 {
+    const double diagonal = sqrt(width * width + height * height);
     if (angle <= M_PI_2)
     {
-        *max_distance = diagonal * cos(abs(angle - atan(height / width)));
+        *max_distance = diagonal * cos(fabs(angle - atan2(height, width)));
         *horizontally = (angle >= M_PI_4);
     }
     else if (angle <= M_PI)
@@ -208,35 +236,35 @@ static inline void get_extrema(int * x_min, int * x_max,
         int * y_min, int * y_max, double a, double r, int width, int height)
 {
     // Minimums
-    if (y(0, a, r) < 0)
+    if (fy(0, a, r) < 0)
     {
-        *x_min = x(0, a, r);
+        *x_min = fx(0, a, r);
         *y_min = 0;
     }
-    else if (y(0, a, r) < height)
+    else if (fy(0, a, r) < height)
     {
         *x_min = 0;
-        *y_min = y(0, a, r);
+        *y_min = fy(0, a, r);
     }
     else // y > h
     {
-        *x_min = x(height, a, r);
+        *x_min = fx(height, a, r);
         *y_min = height;
     }
     // Maximums
-    if (y(width, a, r) < 0)
+    if (fy(width, a, r) < 0)
     {
-        *x_max = x(0, a, r);
+        *x_max = fx(0, a, r);
         *y_max = 0;
     }
-    else if (y(width, a, r) < height)
+    else if (fy(width, a, r) < height)
     {
         *x_max = width;
-        *y_max = y(width, a, r);
+        *y_max = fy(width, a, r);
     }
     else // y > h
     {
-        *x_max = x(height, a, r);
+        *x_max = fx(height, a, r);
         *y_max = height;
     }
     *x_min = max(*x_min, 0);
@@ -256,7 +284,6 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
         void (*f_add_line)(lines_t, unsigned int, unsigned int, unsigned int,
                 unsigned int), unsigned int minimal_line_length)
 {
-    const double diagonal = sqrt(width * width + height * height);
     int horizontally; // is line is horizontally (|x1 - x2| >= |y1 - y2|)
     double angle; // angle between abscissa (0X) and normal to analyzed line
     double distance; // distance between line and point (0, 0)
@@ -285,7 +312,7 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
                 begin_x = -1;
                 for (x = x_min; x < x_max; ++x)
                 {
-                    y = y(x, angle, distance);
+                    y = fy(x, angle, distance);
                     if (y < 0 || y >= height)
                         continue;
 
@@ -318,7 +345,7 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
                 begin_y = -1;
                 for (y = y_min; y < y_max; ++y)
                 {
-                    x = x(y, angle, distance);
+                    x = fx(y, angle, distance);
                     if (x < 0 || x >= width)
                         continue;
 
@@ -359,10 +386,10 @@ void find_lines(raw_image_mono_8_t raw_image, int width, int height,
 {
     raw_image_mono_8_t image_tmp1 = alloc_raw(width, height);
     raw_image_mono_8_t image_tmp2 = alloc_raw(width, height);
-    raw_image_mono_8_t gradients = alloc_raw(width, height);
+    raw_image_mono_8_t angles = alloc_raw(width, height);
     kernel_t gaussian_smooth = new_gaussian(radius * 2 + 1, sigma);
 
-    if ((image_tmp1 == NULL )|| (image_tmp2 == NULL) || (gradients == NULL)
+    if ((image_tmp1 == NULL )|| (image_tmp2 == NULL) || (angles == NULL)
             || (gaussian_smooth == NULL))
     {
         debug_print(LVL_ERROR,
@@ -377,7 +404,7 @@ void find_lines(raw_image_mono_8_t raw_image, int width, int height,
 
     // 2 - sobel edge detection, generate gradients.
     debug_print(LVL_INFO, "Phase 2: edge detection...%c", '\n');
-    edge_gradient(image_tmp1, image_tmp2, gradients, width, height);
+    edge_gradient(image_tmp1, image_tmp2, angles, width, height);
 
     // 3 - tresholding or trace along the edges. TODO: choose one.
     debug_print(LVL_INFO, "Phase 2.5: thresholding...%c", '\n');
@@ -385,7 +412,7 @@ void find_lines(raw_image_mono_8_t raw_image, int width, int height,
 
     // 4 - suppress non-maximum edges.
     debug_print(LVL_INFO, "Phase 3: suppress non-maximum edges...%c", '\n');
-    suppress_non_max_edges(image_tmp1, image_tmp2, gradients, width, height);
+    suppress_non_max_edges(image_tmp1, image_tmp2, angles, width, height);
 
     // 5 - find lines segments using Hough Transform.
     debug_print(LVL_INFO, "Phase 4: find line segments...%c", '\n');
@@ -394,6 +421,6 @@ void find_lines(raw_image_mono_8_t raw_image, int width, int height,
 
     free_raw(image_tmp1, height);
     free_raw(image_tmp2, height);
-    free_raw(gradients, height);
+    free_raw(angles, height);
     free_kernel(gaussian_smooth, radius * 2 + 1);
 }
