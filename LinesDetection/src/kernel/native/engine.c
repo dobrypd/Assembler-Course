@@ -22,35 +22,32 @@
 #define BLACK 0
 
 static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output, int width,
-        int height, int kernel_width, int kernel_height, kernel_t kernel)
+        int height, int kernel_size, kernel_t kernel)
 {
-    debug_print(LVL_INFO, "Adding mask size: %dx%d\n",
-            kernel_height, kernel_width);
     int i, j;
     int kern_i, kern_j;
     int ii, jj;
-    int cent_i, cent_j;
+    int central;
     long val;
     long norm = 0;
 
-    for (kern_i = 0; kern_i < kernel_height; ++kern_i)
-        for (kern_j = 0; kern_j < kernel_width; ++kern_j)
+    for (kern_i = 0; kern_i < kernel_size; ++kern_i)
+        for (kern_j = 0; kern_j < kernel_size; ++kern_j)
             norm += kernel[kern_i][kern_j];
 
-    cent_i = kernel_height / 2;
-    cent_j = kernel_width / 2;
+    central = kernel_size / 2;
 
-    for (i = cent_i; i < height - cent_i; ++i)
+    for (i = central; i < height - central; ++i)
     {
-        for (j = cent_j; j < width - cent_j; ++j)
+        for (j = central; j < width - central; ++j)
         {
             val = 0;
-            for (kern_i = 0; kern_i < kernel_height; ++kern_i)
+            for (kern_i = 0; kern_i < kernel_size; ++kern_i)
             {
-                ii = i + (kern_i - cent_i);
-                for (kern_j = 0; kern_j < kernel_width; ++kern_j)
+                ii = i + (kern_i - central);
+                for (kern_j = 0; kern_j < kernel_size; ++kern_j)
                 {
-                    jj = j + (kern_j - cent_j);
+                    jj = j + (kern_j - central);
                     val += input[ii][jj] * kernel[kern_i][kern_j];
                 }
             }
@@ -63,19 +60,19 @@ static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output, int wi
 
     for (i = 0; i < height; ++i)
     {
-        if (i == cent_i + 1)
-            i = height - 1 - cent_i;
+        if (i == central + 1)
+            i = height - 1 - central;
         for (j = 0; j < width; ++j)
         {
-            if (j == cent_j + 1)
-                j = width - 1 - cent_j;
+            if (j == central + 1)
+                j = width - 1 - central;
             val = 0;
-            for (kern_i = 0; kern_i < kernel_height; ++kern_i)
+            for (kern_i = 0; kern_i < kernel_size; ++kern_i)
             {
-                ii = i + (kern_i - cent_i);
-                for (kern_j = 0; kern_j < kernel_width; ++kern_j)
+                ii = i + (kern_i - central);
+                for (kern_j = 0; kern_j < kernel_size; ++kern_j)
                 {
-                    jj = j + (kern_j - cent_j);
+                    jj = j + (kern_j - central);
 
                     val += input[(min(max(ii, 0), height - 1))][(min(max(jj, 0),
                             width - 1))] * kernel[kern_i][kern_j];
@@ -89,11 +86,9 @@ static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output, int wi
     }
 }
 
-/*
- * Kernels must be normalized.
- */
 static void edge_gradient(raw_image_mono_8_t input, raw_image_mono_8_t output,
         raw_image_mono_8_t gradients, int width, int height)
+// TODO: gradients
 {
     const int sobel_kernel_size = 3;
     const int sobel_kernel_center = sobel_kernel_size / 2;
@@ -181,22 +176,97 @@ static void suppress_non_max_edges(raw_image_mono_8_t input,
     debug_print(LVL_ERROR, "\n\n\nNot implemented yet!\n\n%c", '\n');
 }
 
+
+static inline int y(int x, double a, double r)
+{
+    return -x * (cos(a)) / sin(a) + r / sin(a);
+}
+static inline int x(int y, double a, double r)
+{
+    return -y * (sin(a)) / cos(a) + r / cos(a);
+}
+static inline void get_max_distance(double & max_distance, int & horizontally,
+        int width, int height, double angle)
+{
+    if (angle <= M_PI_2)
+    {
+        *max_distance = diagonal * cos(abs(angle - atan(height / width)));
+        *horizontally = (angle >= M_PI_4);
+    }
+    else if (angle <= M_PI)
+    {
+        *max_distance = height * cos(angle - M_PI_2);
+        *horizontally = (angle <= ((3 / 4) * M_PI));
+    }
+    else
+    {
+        *max_distance = width * cos(2 * M_PI - angle);
+        *horizontally = (angle <= ((7 / 4) * M_PI));
+    }
+}
+static inline void get_extrema(int * x_min, int * x_max,
+        int * y_min, int * y_max, double a, double r, int width, int height)
+{
+    // Minimums
+    if (y(0, a, r) < 0)
+    {
+        *x_min = x(0, a, r);
+        *y_min = 0;
+    }
+    else if (y(0, a, r) < height)
+    {
+        *x_min = 0;
+        *y_min = y(0, a, r);
+    }
+    else // y > h
+    {
+        *x_min = x(height, a, r);
+        *y_min = height;
+    }
+    // Maximums
+    if (y(width, a, r) < 0)
+    {
+        *x_max = x(0, a, r);
+        *y_max = 0;
+    }
+    else if (y(width, a, r) < height)
+    {
+        *x_max = width;
+        *y_max = y(width, a, r);
+    }
+    else // y > h
+    {
+        *x_max = x(height, a, r);
+        *y_max = height;
+    }
+    *x_min = max(*x_min, 0);
+    *y_min = min(max(*y_min, 0), height);
+    *x_max = min(*x_max, width);
+    *y_max = min(max(*y_min, 0), height);
+}
+static inline double len(int x1, int y1, int x2, int y2)
+{
+    int x = abs(x1 - x2);
+    int y = abs(y1 - y2);
+    return sqrt(x * x + y * y);
+}
+
 static void find_segments(raw_image_mono_8_t image, int width, int height,
         lines_t lines,
         void (*f_add_line)(lines_t, unsigned int, unsigned int, unsigned int,
                 unsigned int), unsigned int minimal_line_length)
 {
     const double diagonal = sqrt(width * width + height * height);
-    int horizontally;
-    double angle;
-    double distance;
-    double begin_distance;
-    double max_distance;
-    int x_min, x_max, x, y;
+    int horizontally; // is line is horizontally (|x1 - x2| >= |y1 - y2|)
+    double angle; // angle between abscissa (0X) and normal to analyzed line
+    double distance; // distance between line and point (0, 0)
+    double max_distance; // maximum distance for current angle
+    int x_min, x_max, x, y_min, y_max, y;
     double angle_component = (2 * M_PI) / 1000; // TODO: try to do the math
+    // Found line
     int begin_x, begin_y, end_x, end_y;
 
-    for (angle = 0; angle <= 2 * M_PI; angle += angle_component)
+    for (angle = 0; angle < 2 * M_PI; angle += angle_component)
     {
         if (angle >= M_PI)
         {
@@ -204,47 +274,78 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
             continue;
         }
 
-
-        if (angle )
-        {
-            //max_distance
-            // x_min, x_max
-        }
+        get_max_distance(&max_distance, &horizontally, width, height, angle);
 
         for (distance = 0; distance < max_distance; distance += M_SQRT1_2)
         {
-            begin_distance = -1;
-            for (x = x_min; x < x_max; ++x)
+            get_extrema(&x_min, &x_max, &y_min, &y_max, angle, distance, width,
+                    height);
+            if (horizontally)
             {
-                y = (-(double) x) * (cos(angle) / sin(angle))
-                        + (distance / sin(angle));
-                if (y < 0 || y >= width)
-                    continue;
+                begin_x = -1;
+                for (x = x_min; x < x_max; ++x)
+                {
+                    y = y(x, angle, distance);
+                    if (y < 0 || y >= height)
+                        continue;
 
-                if (image[y][x] == WHITE)
-                {
-                    if (begin_distance < 0)
+                    if (image[y][x] == WHITE)
                     {
-                        begin_distance = distance;
-                        begin_x = x;
-                        begin_y = y;
+                        if (begin_x < 0) // Line start
+                        {
+                            begin_x = x;
+                            begin_y = y;
+                        }
+                        end_x = x;
+                        end_y = y;
                     }
-                    end_x = x;
-                    end_y = y;
-                }
-                else
-                {
-                    if (begin_distance > -1)
+                    else
                     {
-                        if ((distance - begin_distance) > minimal_line_length)
-                            add_line(lines, begin_x, begin_y, end_x, end_y);
-                        begin_distance = -1;
+                        if (begin_x > -1)
+                        {
+                            if (len(begin_x, begin_y, end_x, end_y) > minimal_line_length)
+                                add_line(lines, begin_x, begin_y, end_x, end_y);
+                            begin_x = -1;
+                        }
                     }
                 }
+                if (begin_x > -1)
+                    if (len(begin_x, begin_y, end_x, end_y) > minimal_line_length)
+                        add_line(lines, begin_x, begin_y, end_x, end_y);
             }
-            if (begin_distance > -1)
-                if (distance - begin_distance > minimal_line_length)
-                    add_line(lines, begin_x, begin_y, end_x, end_y);
+            else
+            { // vertically
+                begin_y = -1;
+                for (y = y_min; y < y_max; ++y)
+                {
+                    x = x(y, angle, distance);
+                    if (x < 0 || x >= width)
+                        continue;
+
+                    if (image[y][x] == WHITE)
+                    {
+                        if (begin_y < 0) // Line start
+                        {
+                            begin_x = x;
+                            begin_y = y;
+                        }
+                        end_x = x;
+                        end_y = y;
+                    }
+                    else
+                    {
+                        if (begin_y > -1)
+                        {
+                            if (len(begin_x, begin_y, end_x, end_y) > minimal_line_length)
+                                add_line(lines, begin_x, begin_y, end_x, end_y);
+                            begin_y = -1;
+                        }
+                    }
+                }
+                if (begin_y > -1)
+                    if (len(begin_x, begin_y, end_x, end_y) > minimal_line_length)
+                        add_line(lines, begin_x, begin_y, end_x, end_y);
+            }
 
         }
     }
@@ -272,7 +373,7 @@ void find_lines(raw_image_mono_8_t raw_image, int width, int height,
     // 1 - smoothing.
     debug_print(LVL_INFO, "Phase 1: smoothing...%c", '\n');
     add_mask(raw_image, image_tmp1, width, height, radius * 2 + 1,
-            radius * 2 + 1, gaussian_smooth);
+            gaussian_smooth);
 
     // 2 - sobel edge detection, generate gradients.
     debug_print(LVL_INFO, "Phase 2: edge detection...%c", '\n');
