@@ -197,7 +197,7 @@ int main(int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
     if (global_args.verbosity > 0)
-        printf("Loaded %s.\nBeggining line detection.\n",
+        printf("Loaded %s.\nBegining line detection.\n",
                 global_args.input_filename);
 
     lines_t lines;
