@@ -109,7 +109,7 @@ static void parse_args(int argc, char * argv[])
             debug_print(LVL_INFO, "Setting minimal len to %lu\n", tmp_ulong);
             break;
         case 't':
-            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == 0)
+            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
                     || (tmp_ulong > UCHAR_MAX))
                 usage(EXIT_FAILURE);
             global_args.threshold = tmp_ulong;
@@ -122,7 +122,7 @@ static void parse_args(int argc, char * argv[])
             debug_print(LVL_INFO, "Setting sigma to %f\n", tmp_float);
             break;
         case 'r':
-            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == 0)
+            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
                     || (tmp_ulong > UCHAR_MAX))
                 usage(EXIT_FAILURE);
             global_args.radius = tmp_ulong;
@@ -139,13 +139,13 @@ static void parse_args(int argc, char * argv[])
             global_args.verbosity = 1;
             break;
         case LINE_COLOR_OPTION:
-            if (((tmp_ulong = strtoul (optarg, NULL, 0)) == 0)
+            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
                     || (tmp_ulong > UCHAR_MAX))
                 usage(EXIT_FAILURE);
             global_args.color_line = tmp_ulong;
             break;
         case BG_COLOR_OPTION:
-            if (((tmp_ulong = strtoul (optarg, NULL, 0)) == 0)
+            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
                     || (tmp_ulong > UCHAR_MAX))
                 usage(EXIT_FAILURE);
             global_args.color_bg = tmp_ulong;

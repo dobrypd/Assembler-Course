@@ -1,0 +1,2 @@
+calculate angle component by orientation, horizontal or vertical by
+angle between (horizontal) (0, 0), (0, width) and (0, 0), (1, width).

@@ -101,7 +101,7 @@ void save_lines_to_file(lines_t lines, const char * filename)
 
     for (i = 0; i < lines->size; ++i)
     {
-        fprintf(output, "%d %d %d %d\n", lines->begin_x[i], lines->begin_y[i],
+        fprintf(output, "(%d,%d)-(%d,%d)\n", lines->begin_x[i], lines->begin_y[i],
                 lines->end_x[i], lines->end_y[i]);
     }
     fclose(output);
