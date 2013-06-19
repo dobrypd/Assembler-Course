@@ -48,6 +48,10 @@ $(OBJECTS_NATIVE): $(BIN)/%.o : $(KERNEL_NATIVE)/%.c
 $(OBJECTS_ARM): $(BIN)/%.o : $(KERNEL_ARM)/%.S
 	@echo -en "Assembling \033[38m\033[33m$(patsubst $(SRC)/kernel/%,%, $<)\033[0m...\n"
 	$(CC) $(AFLAGS) $< -o $@
+	
+asm: $(KERNEL_NATIVE)/*.c
+	@echo -en " \033[38m\033[35mAssembly from native...\033[0m\n"
+	$(CC) $(CFLAGS) -S $< -I $(INCLUDES) -o $(BIN)/$@.S
 
 test: all
 	$(SCRIPTS)/test_runner.sh
@@ -56,6 +60,7 @@ test: all
 
 clean:
 	rm -f $(BIN)/*.o
+	rm -f $(BIN)/*.S
 	find $(ROOT) -iname "*.bak" | xargs rm -f
 	find $(ROOT) -iname "*.swp" | xargs rm -f
 	find $(ROOT) -iname "*~" | xargs rm -f

@@ -31,6 +31,12 @@ lines_t detect_lines(image_t image, unsigned int minimal_line_length,
     lines->end_x = NULL;
     lines->end_y = NULL;
 
+#ifndef NDEBUG
+    printf("Arguments:\n\t%p\t%d\t%d\t%p\t%p\t%d\t%d\t%f\t%d\n",
+            get_raw_image_mono_8(image), image->width, image->height,
+            lines, &add_line, minimal_line_length, threshold, sigma, radius);
+#endif
+
     find_lines(get_raw_image_mono_8(image), image->width, image->height, lines,
             &add_line, minimal_line_length, threshold, sigma, radius);
 
