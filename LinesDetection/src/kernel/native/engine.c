@@ -109,13 +109,12 @@ static void edge_gradient(raw_image_mono_8_t input, raw_image_mono_8_t output,
         {
             val1 = 0;
             val2 = 0;
-            for (kern_i = 0; kern_i < sobel_kernel_size; ++kern_i)
+            ii = i - sobel_kernel_center;
+            for (kern_i = 0; kern_i < sobel_kernel_size; ++kern_i, ++ii)
             {
-                ii = i + (kern_i - sobel_kernel_center);
-                for (kern_j = 0; kern_j < sobel_kernel_size; ++kern_j)
+                jj = j - sobel_kernel_center;
+                for (kern_j = 0; kern_j < sobel_kernel_size; ++kern_j, +jj)
                 {
-                    jj = j + (kern_j - sobel_kernel_center);
-
                     val1 += input[ii][jj] * sobel1[kern_i][kern_j];
                     val2 += input[ii][jj] * sobel2[kern_i][kern_j];
                 }

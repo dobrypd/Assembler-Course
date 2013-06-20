@@ -39,7 +39,7 @@
     pushall ;\
     mov r4, REGISTER ;\
     ldr r0, .DBG_OUT ;\
-    mov r1, #0 ;\
+    ldr r1, =__LINE__ ;\
     mov r2, r4 ;\
     mov r3, r4 ;\
     bl printf ;\
@@ -51,7 +51,7 @@
     mvfd f0, f2 ;\
     mvfd f1, f2 ;\
     ldr r0, .DBG_OUT + 4 ;\
-    mov r1, #__LINE__ ;\
+    ldr r1, =__LINE__ ;\
     bl printf ;\
     popallf ;\
     popall
@@ -311,8 +311,6 @@ find_lines:
     sub r0, #1
     mov r5, r0
 .I_IS_OK_MAX:
-    debug_print(r4)
-    debug_print(r5)
     ldr r6, [sp, #76] // kernel
     ldr r6, [r6, r3, asl #2]
     ldrb r6, [r6, r7, asl #2]
@@ -345,7 +343,6 @@ find_lines:
     ldr r4, [sp, #96] // width
     b .FOR_SMOOTH2_BEGIN_COLUMN
 .FOR_SMOOTH2_END_COLUMN:
-    // Load for line 178.
     ldr r2, [sp, #92] // height
     ldr r8, [sp, #28] // kernel size
     ldr r3, [sp, #8] // load i
@@ -354,10 +351,149 @@ find_lines:
     b .FOR_SMOOTH2_BEGIN_ROW
 .SMOOTH2_DONE:
 
+    /**
+     * Phase 1 finished
+     */
+
+
+
+
+    /**
+     * Phase 2: Add sobel masks.
+     */
+.ADD_SOBEL:
+#define SOBEL_SIZE #3
+#define SOBEL_CENTER #1
+    mov r0, SOBEL_SIZE
+    mov r1, SOBEL_SIZE
+    mov r2, #-1
+    mov r3, #-2
+    mov r4, #-1
+    str r4, [sp]
+    mov r4, #0
+    str r4, [sp, #4]
+    str r4, [sp, #8]
+    str r4, [sp, #12]
+    mov r4, #1
+    str r4, [sp, #16]
+    str r4, [sp, #24]
+    mov r4, #2
+    str r4, [sp, #20]
+    bl new_kernel
+    str r0, [sp, #72] // sobel 1
+    mov r0, SOBEL_SIZE
+    mov r1, SOBEL_SIZE
+    mov r2, #1
+    mov r3, #0
+    mov r4, #-1
+    str r4, [sp]
+    str r4, [sp, #24]
+    mov r4, #2
+    str r4, [sp, #4]
+    mov r4, #0
+    str r4, [sp, #8]
+    str r4, [sp, #20]
+    mov r4, #-2
+    str r4, [sp, #12]
+    str r2, [sp, #16]
+    bl new_kernel
+    str r0, [sp, #68] // sobel 2
+
+    // Ok, have 2 new kernels - sobel1 and sobel2 saved on stack.
+    // Now input is tmp1(84), and output is tmp2(80).
+
+    ldr r2, [sp, #92]
+    sub r2, SOBEL_CENTER // height - center
+    ldr r4, [sp, #96]
+    sub r4, SOBEL_CENTER // width - center
+    mov r3, SOBEL_CENTER // i = central
+    str r3, [sp, #8] // store i
+.FOR_SOBEL1_BEGIN_ROW:
+    cmp r3, r2
+    bge .SOBEL1_DONE
+    mov r3, SOBEL_CENTER
+    str r3, [sp, #12] // store j
+.FOR_SOBEL1_BEGIN_COLUMN:
+    cmp r3, r4
+    bge .FOR_SOBEL1_END_COLUMN
+    mov r3, #0 // kernel_i
+    ldr r5, [sp, #8] // i
+    sub r5, SOBEL_CENTER // ii = i-center
+    mov r9, #0 // val1 = 0
+    mov r8, #0 // val2 = 0
+.FOR_SOBEL1_KERN_BEGIN_ROW:
+    cmp r3, SOBEL_SIZE
+    bge .SOBEL1_KERN_DONE
+    mov r7, #0 // kernel_j
+    ldr r4, [sp, #12] // j
+    sub r4, SOBEL_CENTER // jj = j-center
+.FOR_SOBEL1_KERN_BEGIN_COLUMN:
+    cmp r7, SOBEL_SIZE
+    bge .FOR_SOBEL1_KERN_END_COLUMN
+
+    //val1 += input[ii][jj] * sobel1[kern_i][kern_j];
+    //val2 += input[ii][jj] * sobel2[kern_i][kern_j];
+    ldr r6, [sp, #72] // sobel1
+    ldr r6, [r6, r3, asl #2]
+    ldrb r6, [r6, r7, asl #2]
+    ldr r2, [sp, #84] // input (tmp1)
+    ldr r2, [r2, r5, asl #2]
+    ldrb r2, [r2, r4, asl #2]
+    mul r0, r2, r6
+    add r9, r0 // val1+=r0
+    ldr r6, [sp, #68] // sobel2
+    ldr r6, [r6, r3, asl #2]
+    ldrb r6, [r6, r7, asl #2]
+    mul r0, r2, r6
+    add r8, r0 // val2+=r0
+
+    add r7, #1
+    add r4, #1
+    b .FOR_SOBEL1_KERN_BEGIN_COLUMN
+.FOR_SOBEL1_KERN_END_COLUMN:
+    add r3, #1
+    add r5, #1
+    b .FOR_SOBEL1_KERN_BEGIN_ROW
+.SOBEL1_KERN_DONE:
+    flts f0, r9
+    flts f1, r8
+    fmls f0, f0, f0
+    fmls f1, f1, f1
+    adfs f0, f0, f1
+    sqtd f1, f0 // f1 = val1*val + val2*val2 as double
+    stfd f1, [sp, #-8]!
+    ldmfd sp!, {r0, r1}
+    bl sqrt
+    fixz r0, f0
+    ldr r3, [sp, #12] // load j to r3
+    ldr r2, [sp, #8] // load i to r2
+    ldr r9, [sp, #80] // tmp2 to r9 //XXX:100
+    ldr r9, [r9, r2, asl #2]
+    strb r0, [r9, r3, asl #2]
+    ldr r4, [sp, #96]
+    sub r4, SOBEL_CENTER // width - center
+    add r3, #1
+    str r3, [sp, #12] // store j
+    b .FOR_SOBEL1_BEGIN_COLUMN
+.FOR_SOBEL1_END_COLUMN:
+    ldr r4, [sp, #96]
+    sub r4, SOBEL_CENTER // width - center
+    ldr r2, [sp, #92]
+    sub r2, SOBEL_CENTER // height - center
+    ldr r3, [sp, #8] // load i
+    add r3, #1
+    str r3, [sp, #8] // sore i
+    b .FOR_SOBEL1_BEGIN_ROW
+.SOBEL1_DONE:
+    /**
+     * Phase 2 finished.
+     */
+
     // Free temporary images
     // TODO: tmp1 tmp2
-    // Free gaussian gernel
+    // Free gaussian kernel
     // TODO: gaussian
+    // Free sobel masks
 .EXIT:
     epilogue
 
