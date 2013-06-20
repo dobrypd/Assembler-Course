@@ -17,7 +17,7 @@ lines_t detect_lines(image_t image, unsigned int minimal_line_length,
         uint8_t threshold, float sigma, int radius,
         int return_outputs_on_stdout)
 {
-    debug_print(LVL_INFO, "Detecting lines %p\n", image);
+    debug_print(LVL_INFO, "Detecting lines for image: %p\n", image);
     lines_t lines = (lines_t)malloc(sizeof(struct _lines_t));
     if (lines == NULL)
     {
@@ -31,11 +31,13 @@ lines_t detect_lines(image_t image, unsigned int minimal_line_length,
     lines->end_x = NULL;
     lines->end_y = NULL;
 
-#ifndef NDEBUG
-    printf("Arguments:\n\t%p\t%d\t%d\t%p\t%p\t%d\t%d\t%f\t%d\n",
+    debug_print(LVL_INFO,
+            "Arguments:\n"
+            "\t&raw_image width    height   &lines     &add_line  min_line "
+            "t-hold   sigma    radius\n"
+            "\t%-10p %-8d %-8d %-10p %-10p %-8d %-8d %-8f %-8d\n",
             get_raw_image_mono_8(image), image->width, image->height,
             lines, &add_line, minimal_line_length, threshold, sigma, radius);
-#endif
 
     find_lines(get_raw_image_mono_8(image), image->width, image->height, lines,
             &add_line, minimal_line_length, threshold, sigma, radius);

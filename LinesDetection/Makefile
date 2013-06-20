@@ -2,6 +2,8 @@
 # pd291528@students.mimuw.edu.pl
 include bin/Paths.mk
 
+ARM_VERSION=armv5te
+#ARM_CPU_VERSION=arm926ej-s
 KERNEL_ARCH=$(KERNEL_ARM)
 CC=arm-linux-gnu-gcc
 ifeq ($(arch), native)
@@ -27,9 +29,9 @@ ifdef debug
 	OPTDBG= -g -DDBGLVL=$(debug)
 endif
 
-AFLAGS=-Wall -Werror -c $(OPTDBG)
-CFLAGS=-Wall -Werror -c $(OPTDBG)
-LFLAGS=-Wall -Werror $(OPTDBG) -lm
+AFLAGS=-Wall -Werror -c $(OPTDBG) -march=$(ARM_VERSION)
+CFLAGS=-Wall -Werror -c $(OPTDBG) -march=$(ARM_VERSION)
+LFLAGS=-Wall -Werror $(OPTDBG) -lm -march=$(ARM_VERSION)
 
 all : $(PROJECT)
 
@@ -51,7 +53,7 @@ $(OBJECTS_ARM): $(BIN)/%.o : $(KERNEL_ARM)/%.S
 	
 asm: $(KERNEL_NATIVE)/*.c
 	@echo -en " \033[38m\033[35mAssembly from native...\033[0m\n"
-	$(CC) $(CFLAGS) -S $< -I $(INCLUDES) -o $(BIN)/$@.S
+	$(CC) $(AFLAGS) -S $< -I $(INCLUDES) -o $(BIN)/$@.S
 
 test: all
 	$(SCRIPTS)/test_runner.sh

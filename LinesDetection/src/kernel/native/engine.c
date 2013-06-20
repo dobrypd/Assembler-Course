@@ -43,12 +43,12 @@ static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output,
         for (j = central; j < width - central; ++j)
         {
             val = 0;
-            for (kern_i = 0; kern_i < kernel_size; ++kern_i)
+            ii = i - central;
+            for (kern_i = 0; kern_i < kernel_size; ++kern_i, ++ii)
             {
-                ii = i + (kern_i - central);
-                for (kern_j = 0; kern_j < kernel_size; ++kern_j)
+                jj = j - central
+                for (kern_j = 0; kern_j < kernel_size; ++kern_j, ++jj)
                 {
-                    jj = j + (kern_j - central);
                     val += input[ii][jj] * kernel[kern_i][kern_j];
                 }
             }
