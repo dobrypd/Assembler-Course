@@ -46,7 +46,7 @@ static void add_mask(raw_image_mono_8_t input, raw_image_mono_8_t output,
             ii = i - central;
             for (kern_i = 0; kern_i < kernel_size; ++kern_i, ++ii)
             {
-                jj = j - central
+                jj = j - central;
                 for (kern_j = 0; kern_j < kernel_size; ++kern_j, ++jj)
                 {
                     val += input[ii][jj] * kernel[kern_i][kern_j];
@@ -282,7 +282,7 @@ static void find_segments(raw_image_mono_8_t image, int width, int height,
     double distance; // distance between line and point (0, 0)
     double max_distance; // maximum distance for current angle
     int x_min, x_max, x, y_min, y_max, y;
-    double angle_component = (2.0 * M_PI) / 360.0;
+    double angle_component = (2.0 * M_PI) / 100.0; // XXX: 360?
     // Found line
     int begin_x, begin_y, end_x, end_y;
 

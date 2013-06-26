@@ -9,7 +9,7 @@
 
     .file   "engine.S"
     .global __aeabi_idiv
-    //.global __divsi3
+    .global __divsi3
     .section    .rodata
     .align  2
 
@@ -18,6 +18,14 @@
     .ascii ">DBG: (line:%4d) val: %-12d : %#x\012\000"
 .float_debug_output:
     .ascii ">DBG: (line:%4d) val: %-12f : %#x\012\000"
+.debug_phase_1:
+    .ascii "Phase 1: smoothing...\012\000"
+.debug_phase_2:
+    .ascii "Phase 2: edge detection...\012\000"
+.debug_phase_3:
+    .ascii "Phase 3: thresholding...\012\000"
+.debug_phase_4:
+    .ascii "Phase 4: find line segments...\012\000"
 #endif
 
     .text
@@ -31,10 +39,6 @@
     stmfd sp!, {r0-r12}
 #define popall \
     ldmfd sp!, {r0-r12}
-#define pushallf \
-    stmfd sp!, {f0, f1}
-#define popallf \
-    lfmfd sp!, 1, f0
 #define debug_print(REGISTER) \
     pushall ;\
     mov r4, REGISTER ;\
@@ -46,14 +50,32 @@
     popall
 #define fdebug_print(REGISTER) \
     pushall ;\
-    pushallf ;\
     mvfd f2, REGISTER @ float ;\
-    mvfd f0, f2 ;\
-    mvfd f1, f2 ;\
+    stfd    f2, [sp, #-8]! ;\
+    ldmfd   sp!, {r2, r3} ;\
     ldr r0, .DBG_OUT + 4 ;\
     ldr r1, =__LINE__ ;\
     bl printf ;\
-    popallf ;\
+    popall
+#define debug_phase_print_1 \
+    pushall ;\
+    ldr r0, .DBG_OUT + 8 ;\
+    bl printf ;\
+    popall
+#define debug_phase_print_2 \
+    pushall ;\
+    ldr r0, .DBG_OUT + 12 ;\
+    bl printf ;\
+    popall
+#define debug_phase_print_3 \
+    pushall ;\
+    ldr r0, .DBG_OUT + 16 ;\
+    bl printf ;\
+    popall
+#define debug_phase_print_4 \
+    pushall ;\
+    ldr r0, .DBG_OUT + 20 ;\
+    bl printf ;\
     popall
 #endif
 
@@ -133,6 +155,9 @@ find_lines:
      * Phase 1: Add gaussian mask. Smoothing.
      */
 .ADD_MASK:
+#ifndef NDEBUG
+    debug_phase_print_1;
+#endif
     // Sum kernel cells to normalize.
     mov r7, #0
     mov r1, #0
@@ -202,10 +227,10 @@ find_lines:
     //val += input[ii][jj] * kernel[kern_i][kern_j];
     ldr r6, [sp, #76] // kernel
     ldr r6, [r6, r3, asl #2]
-    ldrb r6, [r6, r7, asl #2]
+    ldr r6, [r6, r7, asl #2]
     ldr r2, [sp, #100] // input (raw_image)
     ldr r2, [r2, r5, asl #2]
-    ldrb r2, [r2, r4, asl #2]
+    ldrb r2, [r2, r4]
     mul r0, r2, r6
     add r9, r0 // val+=r0
 
@@ -224,8 +249,8 @@ find_lines:
     ldr r3, [sp, #12] // load j to r3
     ldr r2, [sp, #8] // load i to r2
     ldr r9, [sp, #84] // tmp1 to r9
-    ldr r9, [r9, r2, asl #2]
-    strb r0, [r9, r3, asl #2]
+    ldr r9, [r9, r2, lsl #2]
+    strb r0, [r9, r3]
     add r3, #1
     str r3, [sp, #12] // store j
     ldr r1, [sp, #16] // central
@@ -313,10 +338,10 @@ find_lines:
 .I_IS_OK_MAX:
     ldr r6, [sp, #76] // kernel
     ldr r6, [r6, r3, asl #2]
-    ldrb r6, [r6, r7, asl #2]
+    ldr r6, [r6, r7, asl #2]
     ldr r2, [sp, #100] // input (raw_image)
     ldr r2, [r2, r5, asl #2]
-    ldrb r2, [r2, r4, asl #2]
+    ldrb r2, [r2, r4]
     mul r0, r2, r6
     add r9, r0 // val+=r0
 
@@ -336,7 +361,7 @@ find_lines:
     ldr r2, [sp, #8] // load i to r2
     ldr r9, [sp, #84] // tmp1 to r9
     ldr r9, [r9, r2, asl #2]
-    strb r0, [r9, r3, asl #2]
+    strb r0, [r9, r3]
     add r3, #1
     str r3, [sp, #12] // store j
     ldr r1, [sp, #16] // central
@@ -356,12 +381,13 @@ find_lines:
      */
 
 
-
-
     /**
      * Phase 2: Add sobel masks.
      */
 .ADD_SOBEL:
+#ifndef NDEBUG
+    debug_phase_print_2;
+#endif
 #define SOBEL_SIZE #3
 #define SOBEL_CENTER #1
     mov r0, SOBEL_SIZE
@@ -434,16 +460,16 @@ find_lines:
     //val1 += input[ii][jj] * sobel1[kern_i][kern_j];
     //val2 += input[ii][jj] * sobel2[kern_i][kern_j];
     ldr r6, [sp, #72] // sobel1
-    ldr r6, [r6, r3, asl #2]
-    ldrb r6, [r6, r7, asl #2]
+    ldr r6, [r6, r3, lsl #2]
+    ldr r6, [r6, r7, lsl #2]
     ldr r2, [sp, #84] // input (tmp1)
-    ldr r2, [r2, r5, asl #2]
-    ldrb r2, [r2, r4, asl #2]
+    ldr r2, [r2, r5, lsl #2]
+    ldrb r2, [r2, r4]
     mul r0, r2, r6
     add r9, r0 // val1+=r0
     ldr r6, [sp, #68] // sobel2
     ldr r6, [r6, r3, asl #2]
-    ldrb r6, [r6, r7, asl #2]
+    ldr r6, [r6, r7, asl #2]
     mul r0, r2, r6
     add r8, r0 // val2+=r0
 
@@ -455,8 +481,11 @@ find_lines:
     add r5, #1
     b .FOR_SOBEL1_KERN_BEGIN_ROW
 .SOBEL1_KERN_DONE:
+    debug_print(r8)
+    debug_print(r9)
     flts f0, r9
     flts f1, r8
+    // XXX: sqrt(-8 * -8) should be 8, not 2
     fmls f0, f0, f0
     fmls f1, f1, f1
     adfs f0, f0, f1
@@ -465,11 +494,12 @@ find_lines:
     ldmfd sp!, {r0, r1}
     bl sqrt
     fixz r0, f0
+    debug_print(r0)
     ldr r3, [sp, #12] // load j to r3
     ldr r2, [sp, #8] // load i to r2
-    ldr r9, [sp, #80] // tmp2 to r9 //XXX:100
+    ldr r9, [sp, #100] // tmp2 to r9 //XXX:raw100 tmp80
     ldr r9, [r9, r2, asl #2]
-    strb r0, [r9, r3, asl #2]
+    strb r0, [r9, r3]
     ldr r4, [sp, #96]
     sub r4, SOBEL_CENTER // width - center
     add r3, #1
@@ -489,6 +519,15 @@ find_lines:
      * Phase 2 finished.
      */
 
+    // TODO: Phase 3 treshold
+#ifndef NDEBUG
+    debug_phase_print_3;
+#endif
+    // TODO: Phase 4 lines
+#ifndef NDEBUG
+    debug_phase_print_4;
+#endif
+
     // Free temporary images
     // TODO: tmp1 tmp2
     // Free gaussian kernel
@@ -502,6 +541,10 @@ find_lines:
 .DBG_OUT:
     .word .debug_output
     .word .float_debug_output
+    .word .debug_phase_1
+    .word .debug_phase_2
+    .word .debug_phase_3
+    .word .debug_phase_4
 #endif
 .LEND_TEXT_DATA:
     .size   find_lines, .-find_lines

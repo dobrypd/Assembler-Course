@@ -30,8 +30,8 @@ ifdef debug
 endif
 
 AFLAGS=-Wall -Werror -c $(OPTDBG) -march=$(ARM_VERSION)
-CFLAGS=-Wall -Werror -c $(OPTDBG) -march=$(ARM_VERSION)
-LFLAGS=-Wall -Werror $(OPTDBG) -lm -march=$(ARM_VERSION)
+CFLAGS=-Wall -Werror -c $(OPTDBG)
+LFLAGS=-Wall -Werror $(OPTDBG) -lm
 
 all : $(PROJECT)
 
