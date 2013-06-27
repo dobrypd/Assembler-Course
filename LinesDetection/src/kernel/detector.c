@@ -18,18 +18,22 @@ lines_t detect_lines(image_t image, unsigned int minimal_line_length,
         int return_outputs_on_stdout)
 {
     debug_print(LVL_INFO, "Detecting lines for image: %p\n", image);
-    lines_t lines = (lines_t)malloc(sizeof(struct _lines_t));
-    if (lines == NULL)
+    lines_t lines = NULL;
+    if (!return_outputs_on_stdout)
     {
-        fputs("malloc error\n", stderr);
-        return NULL;
+        lines = (lines_t)malloc(sizeof(struct _lines_t));
+        if (lines == NULL)
+        {
+            fputs("malloc error\n", stderr);
+            return NULL;
+        }
+        lines->size = 0;
+        lines->mem_size = 0;
+        lines->begin_x = NULL;
+        lines->begin_y = NULL;
+        lines->end_x = NULL;
+        lines->end_y = NULL;
     }
-    lines->size = 0;
-    lines->mem_size = 0;
-    lines->begin_x = NULL;
-    lines->begin_y = NULL;
-    lines->end_x = NULL;
-    lines->end_y = NULL;
 
     debug_print(LVL_INFO,
             "Arguments:\n"
@@ -73,26 +77,34 @@ void add_line(lines_t lines, unsigned int begin_x, unsigned int begin_y,
         end_y = begin_y;
         begin_y = tmp;
     }
-    if (((lines->size + 1) * sizeof(unsigned int)) >= lines->mem_size)
+    if (lines == NULL)
     {
-        lines->mem_size = lines->mem_size
-                + sizeof(unsigned int) * lines_len_add_size;
-        lines->begin_x = realloc(lines->begin_x, lines->mem_size);
-        lines->begin_y = realloc(lines->begin_y, lines->mem_size);
-        lines->end_x = realloc(lines->end_x, lines->mem_size);
-        lines->end_y = realloc(lines->end_y, lines->mem_size);
-        if ((lines->begin_x == NULL) || (lines->begin_y == NULL)
-                || (lines->end_x == NULL) || (lines->end_y == NULL))
-        {
-            fputs("malloc error\n", stderr);
-            return;
-        }
+        // Print on screen
+        printf("%d %d %d %d\n", begin_x, begin_y, end_x, end_y);
     }
-    lines->begin_x[lines->size] = begin_x;
-    lines->begin_y[lines->size] = begin_y;
-    lines->end_x[lines->size] = end_x;
-    lines->end_y[lines->size] = end_y;
-    lines->size++;
+    else
+    {
+        if (((lines->size + 1) * sizeof(unsigned int)) >= lines->mem_size)
+        {
+            lines->mem_size = lines->mem_size
+                    + sizeof(unsigned int) * lines_len_add_size;
+            lines->begin_x = realloc(lines->begin_x, lines->mem_size);
+            lines->begin_y = realloc(lines->begin_y, lines->mem_size);
+            lines->end_x = realloc(lines->end_x, lines->mem_size);
+            lines->end_y = realloc(lines->end_y, lines->mem_size);
+            if ((lines->begin_x == NULL) || (lines->begin_y == NULL)
+                    || (lines->end_x == NULL) || (lines->end_y == NULL))
+            {
+                fputs("malloc error\n", stderr);
+                return;
+            }
+        }
+        lines->begin_x[lines->size] = begin_x;
+        lines->begin_y[lines->size] = begin_y;
+        lines->end_x[lines->size] = end_x;
+        lines->end_y[lines->size] = end_y;
+        lines->size++;
+    }
 }
 
 void save_lines_to_file(lines_t lines, const char * filename)

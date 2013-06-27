@@ -42,6 +42,9 @@ extern raw_image_mono_8_t alloc_raw(int width, int height)
         }
     }
 
+    debug_print(LVL_INFO, "Allocated raw %d x %d addr: %p\n",
+            width, height, new_raw);
+
     return new_raw;
 }
 

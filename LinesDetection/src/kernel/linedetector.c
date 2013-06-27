@@ -25,11 +25,11 @@ static const int default_radius = 4;
 
 enum output_format_t
 {
-    NETPBM,
-    TEXTFILE
+    NETPBM, TEXTFILE
 };
 
-static struct global_args_t {
+static struct global_args_t
+{
     unsigned int min_line_length;
     uint8_t threshold;
     float sigma;
@@ -50,20 +50,20 @@ enum
     VERSION_OPTION
 };
 
-static const struct option long_options[] = {
-    { "min-line-len", no_argument, NULL, 'm' },
-    { "threshold", no_argument, NULL, 't' },
-    { "sigma", no_argument, NULL, 's' },
-    { "radius", no_argument, NULL, 'r' },
-    { "pgm-format", no_argument, NULL, 'f' },
-    { "output", required_argument, NULL, 'o' },
-    { "verbose", no_argument, NULL, 'v' },
-    { "line-color", required_argument, NULL, LINE_COLOR_OPTION },
-    { "bg-color", required_argument, NULL, BG_COLOR_OPTION },
-    { "help", no_argument, NULL, HELP_OPTION },
-    { "version", no_argument, NULL, VERSION_OPTION },
-    { NULL, no_argument, NULL, 0 }
-};
+static const struct option long_options[] =
+{
+{ "min-line-len", no_argument, NULL, 'm' },
+{ "threshold", no_argument, NULL, 't' },
+{ "sigma", no_argument, NULL, 's' },
+{ "radius", no_argument, NULL, 'r' },
+{ "pgm-format", no_argument, NULL, 'f' },
+{ "output", required_argument, NULL, 'o' },
+{ "verbose", no_argument, NULL, 'v' },
+{ "line-color", required_argument, NULL, LINE_COLOR_OPTION },
+{ "bg-color", required_argument, NULL, BG_COLOR_OPTION },
+{ "help", no_argument, NULL, HELP_OPTION },
+{ "version", no_argument, NULL, VERSION_OPTION },
+{ NULL, no_argument, NULL, 0 } };
 
 static char * program_name;
 
@@ -97,71 +97,70 @@ static void parse_args(int argc, char * argv[])
         if (opt == -1)
             break;
 
-        switch(opt)
+        switch (opt)
         {
         unsigned long int tmp_ulong;
         float tmp_float;
-        case 'm':
-            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == 0)
-                    || (tmp_ulong > UINT_MAX))
-                usage(EXIT_FAILURE);
-            global_args.min_line_length = tmp_ulong;
-            debug_print(LVL_INFO, "Setting minimal len to %lu\n", tmp_ulong);
-            break;
-        case 't':
-            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
-                    || (tmp_ulong > UCHAR_MAX))
-                usage(EXIT_FAILURE);
-            global_args.threshold = tmp_ulong;
-            debug_print(LVL_INFO, "Setting threshold to %lu\n", tmp_ulong);
-            break;
-        case 's':
-            if ((tmp_float = strtod(optarg, NULL)) == 0)
-                usage(EXIT_FAILURE);
-            global_args.sigma = tmp_float;
-            debug_print(LVL_INFO, "Setting sigma to %f\n", tmp_float);
-            break;
-        case 'r':
-            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
-                    || (tmp_ulong > UCHAR_MAX))
-                usage(EXIT_FAILURE);
-            global_args.radius = tmp_ulong;
-            debug_print(LVL_INFO, "Setting radius to %lu\n", tmp_ulong);
-            break;
-        case 'f':
-            global_args.output_format = NETPBM;
-            break;
-        case 'o':
-            global_args.out_filename = optarg;
-            debug_print(LVL_INFO, "Setting output filename to %s\n", optarg);
-            break;
-        case 'v':
-            global_args.verbosity = 1;
-            break;
-        case LINE_COLOR_OPTION:
-            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
-                    || (tmp_ulong > UCHAR_MAX))
-                usage(EXIT_FAILURE);
-            global_args.color_line = tmp_ulong;
-            break;
-        case BG_COLOR_OPTION:
-            if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
-                    || (tmp_ulong > UCHAR_MAX))
-                usage(EXIT_FAILURE);
-            global_args.color_bg = tmp_ulong;
-            break;
-        case VERSION_OPTION:
-            version();
-            exit(EXIT_SUCCESS);
-            break;
-        case HELP_OPTION:
-            usage(EXIT_SUCCESS);
-            break;
-        default:
+    case 'm':
+        if (((tmp_ulong = strtoul(optarg, NULL, 0)) == 0)
+                || (tmp_ulong > UINT_MAX))
             usage(EXIT_FAILURE);
-            /* no break */
-        }
+        global_args.min_line_length = tmp_ulong;
+        debug_print(LVL_INFO, "Setting minimal len to %lu\n", tmp_ulong);
+        break;
+    case 't':
+        if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
+        || (tmp_ulong > UCHAR_MAX))usage(EXIT_FAILURE);
+        global_args.threshold = tmp_ulong;
+        debug_print(LVL_INFO, "Setting threshold to %lu\n", tmp_ulong);
+        break;
+        case 's':
+        if ((tmp_float = strtod(optarg, NULL)) == 0)
+        usage(EXIT_FAILURE);
+        global_args.sigma = tmp_float;
+        debug_print(LVL_INFO, "Setting sigma to %f\n", tmp_float);
+        break;
+        case 'r':
+        if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
+                || (tmp_ulong > UCHAR_MAX))
+        usage(EXIT_FAILURE);
+        global_args.radius = tmp_ulong;
+        debug_print(LVL_INFO, "Setting radius to %lu\n", tmp_ulong);
+        break;
+        case 'f':
+        global_args.output_format = NETPBM;
+        break;
+        case 'o':
+        global_args.out_filename = optarg;
+        debug_print(LVL_INFO, "Setting output filename to %s\n", optarg);
+        break;
+        case 'v':
+        global_args.verbosity = 1;
+        break;
+        case LINE_COLOR_OPTION:
+        if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
+                || (tmp_ulong > UCHAR_MAX))
+        usage(EXIT_FAILURE);
+        global_args.color_line = tmp_ulong;
+        break;
+        case BG_COLOR_OPTION:
+        if (((tmp_ulong = strtoul(optarg, NULL, 0)) == ULONG_MAX)
+                || (tmp_ulong > UCHAR_MAX))
+        usage(EXIT_FAILURE);
+        global_args.color_bg = tmp_ulong;
+        break;
+        case VERSION_OPTION:
+        version();
+        exit(EXIT_SUCCESS);
+        break;
+        case HELP_OPTION:
+        usage(EXIT_SUCCESS);
+        break;
+        default:
+        usage(EXIT_FAILURE);
+        /* no break */
     }
+}
 
     if (global_args.verbosity > 0)
         puts("verbose flag is set\n");
@@ -203,22 +202,26 @@ int main(int argc, char * argv[])
     lines_t lines;
     lines = detect_lines(image, global_args.min_line_length,
             global_args.threshold, global_args.sigma, global_args.radius,
-            global_args.out_filename == NULL);
-    if (check_lines(lines) != DETECTION_STATUS_OK)
-    {
-        free_image(image);
-        free_lines(lines);
-        fputs("Cannot continue: error while detecting lines.\n\n", stderr);
-        exit(EXIT_FAILURE);
-    }
+            ((global_args.out_filename == NULL )
+            && (global_args.output_format == TEXTFILE)));
+    if ((check_lines(lines) != DETECTION_STATUS_OK) &&
+            ((global_args.out_filename != NULL) ||
+                    (global_args.output_format != TEXTFILE)))
+            {
+                free_image(image);
+                free_lines(lines);
+                fputs("Cannot continue: error while detecting lines.\n\n",
+                        stderr);
+                exit(EXIT_FAILURE);
+            }
 
-    if (global_args.verbosity > 0)
+if (global_args.verbosity > 0)
         printf("Detected %d lines.\n", lines_how_many(lines));
 
     if (global_args.output_format == NETPBM)
     {
-        debug_print(LVL_INFO, "Saving pgm %s\n", global_args.out_filename);
-        if (global_args.verbosity > 0)
+                    debug_print(LVL_INFO, "Saving pgm %s\n", global_args.out_filename);
+if (global_args.verbosity > 0)
             printf("Will save pgm file in %s.\n", global_args.out_filename);
         // XXX: Commented for testing purpose. Uncomment it!
         add_lines_to_image(image, lines, global_args.color_line,
@@ -228,25 +231,26 @@ int main(int argc, char * argv[])
     }
     else if (global_args.out_filename != NULL)
     {
-        debug_print(LVL_INFO, "Saving txt %s\n", global_args.out_filename);
-        if (global_args.verbosity > 0)
+                    debug_print(LVL_INFO, "Saving txt %s\n", global_args.out_filename);
+            if (global_args.verbosity > 0)
             printf("Will save txt file in %s.\n", global_args.out_filename);
-        save_lines_to_file(lines, global_args.out_filename);
+            save_lines_to_file(lines, global_args.out_filename);
+        }
+
+        free_lines( lines);
+        free_image( image);
+
+if (global_args.verbosity > 0)
+        printf("Finished with success!\n");
+            debug_print(LVL_LOWEST, "Finished %s.\n", program_name);
+        return EXIT_SUCCESS;
     }
 
-    free_lines(lines);
-    free_image(image);
-
-    if (global_args.verbosity > 0)
-        printf("Finished with success!\n");
-    debug_print(LVL_LOWEST, "Finished %s.\n", program_name);
-    return EXIT_SUCCESS;
-}
-
-static void usage(int status)
-{
-    printf("Usage: %s [OPTION]... FILE\n", program_name);
-    fputs("\
+    static void usage(int status)
+    {
+        printf("Usage: %s [OPTION]... FILE\n", program_name);
+        fputs(
+                "\
   Find all lines in monochromatic picture. If non of --pgm_format, or --output\n\
 declared it returns list of pairs, (point_start, point_stop).\n\
 Where point_start, and point_stop are pairs of integers.\n\
@@ -281,14 +285,16 @@ Mandatory arguments to long options are mandatory for short options too.\n\
   -v, --verbose              increase verbosity\n\
       --help                 display this help and exit\n\
       --version              output version information and exit\n\
-", stdout);
-    exit(status);
-}
+",
+                stdout);
+        exit(status);
+    }
 
-static void version()
-{
-    fprintf(stdout, "\
+    static void version()
+    {
+        fprintf(stdout, "\
 Line Detector %s\n\
 Piotr Dobrowolski (c) 2013\n\
-", version_no);
-}
+",
+                version_no);
+    }
