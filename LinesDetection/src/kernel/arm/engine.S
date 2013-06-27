@@ -198,7 +198,7 @@ find_lines:
     sub r2, r1
     sub r4, r1
     str r1, [sp, #16]
-    str r2, [sp, #20]
+    str r2, [sp, #20] // distance
     str r4, [sp, #24]
     str r8, [sp, #28]
 #ifndef NDEBUG
@@ -694,50 +694,52 @@ find_lines:
     mul r1, r9, r9
     mla r1, r2, r2, r1
     mov sl, r2
-    str r1, [sp, #52] // w * w + h * h
+    str r1, [sp, #52] // w * w + h * h (for max distance)
     mov r2, #0
     mov r1, #0
     str r1, [sp, #24] // angle
-    str r2, [sp, #28] // coś2
-    ldfd    f0, [sp, #24]
-    ldfd    f1, .L_CONSTANTS+24
-    cmfe    f0, f1
-    blt .L2
-    mvfd    f2, f0
-    ldfd    f0, .L_CONSTANTS+32
-    cmfe    f2, f0
-    bmi .L75
-.L75:
+    str r2, [sp, #28] // angle has double type!
+    b   .ANGLE_CHECK
+.ANGLE_ADD_COMPONENT:
     ldfd    f0, .L_CONSTANTS
     adfd    f4, f2, f0
-    stfd    f4, [sp, #24]
-.L5:
-    ldfd    f1, [sp, #24]
+    stfd    f4, [sp, #24] // angle
+.ANGLE_CHECK_FINISH:
+    ldfd    f1, [sp, #24] // angle
     ldfd    f0, .L_CONSTANTS+8
     adfd    f1, f1, f0
     stfd    f1, [sp, #24]
     ldfd    f2, [sp, #24]
     ldfd    f1, .L_CONSTANTS+16
     cmfe    f2, f1
-    bpl .L74
-.L2:
+    bpl .SEARCH_DONE
+.ANGLE_CHECK:
+    ldfd    f0, [sp, #24] // angle
+    ldfd    f1, .L_CONSTANTS+24
+    cmfe    f0, f1
+    blt .GET_MAX_DISTANCE
+    mvfd    f2, f0
+    ldfd    f0, .L_CONSTANTS+32
+    cmfe    f2, f0
+    bmi .ANGLE_ADD_COMPONENT
+.GET_MAX_DISTANCE:
     ldr r1, [sp, #52]
     fltd    f0, r1
     sqtd    f4, f0
     cmf f4, f4
-    beq .L6
+    beq .SQRT_SINGLE_COMP
     stfd    f0, [sp, #-8]!
     ldmfd   sp!, {r0, r1}
-    bl  sqrt
+    bl  sqrt // get diagonal
     mvfd    f4, f0
-.L6:
-    ldfd    f0, .L_CONSTANTS
-    ldfd    f1, [sp, #24]
+.SQRT_SINGLE_COMP:
+    ldfd    f0, .L_CONSTANTS // M_PI_2
+    ldfd    f1, [sp, #24]   // angle
     cmfe    f1, f0
-    bls .L76
+    bls .COUNT_MAX_DIST_ANGLE_LESS_THAN_PI_2
     ldfd    f2, .L_CONSTANTS+24
     cmfe    f1, f2
-    bhi .L63
+    bhi .COUNT_MAX_DIST_ANGLE_LESS_THAN_PI
     sufd    f4, f1, f0
     stfd    f4, [sp, #-8]!
     ldmfd   sp!, {r0, r1}
@@ -746,16 +748,16 @@ find_lines:
     ldfd    f1, .L_CONSTANTS+40
     cmfe    f2, f1
     fltd    f2, sl
-.L64:
+.COUNT_DISTANCE_FINISH:
     mufd    f2, f2, f0
-    stfd    f2, [sp, #40] // coś3
+    stfd    f2, [sp, #40] // max distance
     movhi   r1, #0
     movls   r1, #1
-    str r1, [sp, #20]   //coś4
+    str r1, [sp, #20]  // add distance
     mvfd    f0, f2
-.L9:
+.CHECK_EXTREMA:
     cmfe    f0, #0
-    ble .L5
+    ble .ANGLE_CHECK_FINISH
     add r0, sp, #24
     ldmia   r0, {r0-r1}
     add r2, sp, #124
@@ -767,35 +769,35 @@ find_lines:
     ldfd    f6, [sp, #124]
     mnfd    f1, f1
     mnfd    f3, #0
-    stfd    f1, [sp, #64] // cos5
+    stfd    f1, [sp, #64]
     mnfd    f0, f0
     mufd    f1, f5, f3
     mov r1, #0
     mov r2, #0
     dvfd    f1, f1, f6
     mufd    f0, f0, f6
-    str r1, [sp, #32] // cos 6
-    str r2, [sp, #36] // cos 7
-    stfd    f1, [sp, #56] // cos 8
-    stfd    f0, [sp, #4] // cos 10
-    ldfd    f0, [sp, #32] // cos 6
-    ldfd    f1, [sp, #56] // cos 8
+    str r1, [sp, #32]
+    str r2, [sp, #36]
+    stfd    f1, [sp, #56]
+    stfd    f0, [sp, #4]
+    ldfd    f0, [sp, #32]
+    ldfd    f1, [sp, #56]
     dvfd    f7, f0, f6
-    ldfd    f4, [sp, #64] // cos 5
+    ldfd    f4, [sp, #64]
     adfd    f0, f1, f7
     fixz    r0, f0
     mufd    f2, f4, f5
     dvfd    f2, f2, f6
     cmp r0, #0
-    stfd    f2, [sp, #48] // cos9
-    ble .L77
-.L13:
+    stfd    f2, [sp, #48]
+    ble .PREPARE_DIST
+.DIST_2:
     cmp sl, r0
-    ble .L15
+    ble .FINISH_DISTANCE_ITERATION
     mnfd    f2, #0
     mufd    f0, f6, f2
-    ldfd    f1, [sp, #32] // cos 6
-    ldfd    f2, [sp, #4] // cos 10
+    ldfd    f1, [sp, #32]
+    ldfd    f2, [sp, #4]
     dvfd    f4, f1, f5
     dvfd    f0, f0, f5
     dvfd    f1, f2, f5
@@ -804,48 +806,48 @@ find_lines:
     fixz    r2, f0
     fixz    r1, f1
     mov r5, #0
-.L14:
-    ldfd    f1, [sp, #48] // cos 9
+.DIST_3:
+    ldfd    f1, [sp, #48]
     adfd    f0, f7, f1
     fixz    r3, f0
     cmp r3, #0
     movle   ip, r2
-    ble .L17
+    ble .DIST_3_NO_2
     cmp sl, r3
     movle   ip, r1
     movgt   ip, r9
-.L17:
+.DIST_3_NO_2:
     cmp r2, #0
-    ble .L78
+    ble .NOT_NEW
     cmp r9, r0
-    ldfled  f2, [sp, #64] // cos 5
+    ldfled  f2, [sp, #64]
     mufled  f0, f2, f6
     dvfled  f0, f0, f5
     adfled  f0, f4, f0
     fixlez  r4, f0
     movgt   r4, #0
     bicle   r4, r4, r4, asr #31
-.L20:
+.NEXT_ITER:
     cmp r1, #0
     movle   r3, r0
-    ble .L23
+    ble .NEXT_ITER_OLD
     cmp r9, r1
     movgt   r3, sl
-.L23:
-    ldr r1, [sp, #20] // cos 4
+.NEXT_ITER_OLD:
+    ldr r1, [sp, #20] // distance
     cmp r1, #0
-    bne .L24
+    bne .HORIZONTAL_VERTICAL_CHECK
     cmp r3, sl
     movlt   r8, r3
     movge   r8, sl
     cmp r8, r4
     mvnle   r6, #0
-    ble .L26
+    ble .CHECK_ITER_DIST
     ldr r1, [sp, #84]
     mov r3, r4, asl #2
     add r5, r1, r3
     mvn r6, #0
-.L44:
+.CHECK_HORIZONTALY:
     fltd    f0, r4
     mnfd    f0, f0
     mufd    f0, f6, f0
@@ -856,13 +858,13 @@ find_lines:
     movgt   r3, #0
     movle   r3, #1
     orrs    r3, r3, r1, lsr #31
-    bne .L38
+    bne .CHECK_HORIZONTALY_CHECK_ITERATION
     ldr r3, [r5, #0]
     ldrb    r2, [r3, r1]    @ zero_extendqisi2
     cmp r2, WHITE
-    beq .L79
+    beq .CHECK_START_OF_LINE
     cmn r6, #1
-    beq .L38
+    beq .CHECK_HORIZONTALY_CHECK_ITERATION
     ldr r2, [sp, #44]
     rsb r3, r2, r7
     cmp r3, #0
@@ -877,31 +879,31 @@ find_lines:
     cmf f0, f0
     stfned  f1, [sp, #-8]!
     ldmnefd sp!, {r0, r1}
-    blne    sqrt
-.L41:
+    blne    sqrt // distance
+    // Check horizontally
     ldr r3, [sp, #FRAME+88]
     cmp r3, #0
     fltd    f1, r3
     ldfltd  f2, .L_CONSTANTS+48
     adfltd  f1, f1, f2
     cmfe    f1, f0
-    bpl .L66
+    bpl .DO_NOT_ADD_LINE
     mov r2, r6
     ldr r0, [sp, #88]
     mov r1, r7
     ldr r3, [sp, #44]
     str fp, [sp, #0]
     bl  add_line
-.L66:
+.DO_NOT_ADD_LINE:
     mvn r6, #0
-.L38:
+.CHECK_HORIZONTALY_CHECK_ITERATION:
     add r4, r4, #1
     cmp r4, r8
     add r5, r5, #4
-    blt .L44
+    blt .CHECK_HORIZONTALY
     cmn r6, #1
-    beq .L26
-.L71:
+    beq .CHECK_ITER_DIST
+.ITERATION_DISTANCE:
     ldr r1, [sp, #44]
     rsb r3, r1, r7
     cmp r3, #0
@@ -923,28 +925,28 @@ find_lines:
     ldfltd  f2, .L_CONSTANTS+48
     adfltd  f1, f1, f2
     cmfe    f1, f0
-    bpl .L26
+    bpl .CHECK_ITER_DIST
     ldr r0, [sp, #88]
     mov r1, r7
     mov r2, r6
     ldr r3, [sp, #44]
     str fp, [sp, #0]
     bl  add_line
-.L26:
+.CHECK_ITER_DIST:
     ldfd    f4, [sp, #32]
-    ldfd    f0, [sp, #40]
+    ldfd    f0, [sp, #40] // max distance
     adfd    f4, f4, #1
     cmfe    f4, f0
     stfd    f4, [sp, #32]
-    bpl .L5
+    bpl .ANGLE_CHECK_FINISH
     ldfd    f0, [sp, #32]
     ldfd    f1, [sp, #56]
     dvfd    f7, f0, f6
     adfd    f0, f1, f7
     fixz    r0, f0
     cmp r0, #0
-    bgt .L13
-.L77:
+    bgt .DIST_2
+.PREPARE_DIST:
     ldfd    f0, [sp, #32]
     mnfd    f2, #0
     mufd    f1, f6, f2
@@ -957,32 +959,33 @@ find_lines:
     adfd    f0, f0, f4
     fixz    r1, f0
     bic r5, r2, r2, asr #31
-    b   .L14
+    b   .DIST_3
 // It's here because of length of jumps
 .L_CONSTANTS_ALIGNMENT:
     .align  2
 .L_CONSTANTS:
-    .word   1073291771
+    // All of those is double (every two words contains single double value)
+    .word   1073291771  // +0   M_PI_2
     .word   1413754136  // +4
-    .word   1068504511  // +8
+    .word   1068504511  // +8   -angle component
     .word   -1843976422 // +12
-    .word   1075388923  // +16
+    .word   1075388923  // +16  M_2_Pi
     .word   1413754136  // +20
-    .word   1074340347  // +24
+    .word   1074340347  // +24  M_PI_4
     .word   1413754136  // +28
-    .word   1074977148  // +32
+    .word   1074977148  // +32  max angle
     .word   2134057426  // +36
-    .word   1073928572  // +40
+    .word   1073928572  // +40  3 / 4
     .word   2134057426  // +44
-    .word   1106247680  // +48
+    .word   1106247680  // +48  float 0
     .word   0           // +52
-    .word   1075388923  // +56
+    .word   1075388923  // +56  7 / 4
     .word   1413754136  // +60
-    .word   1075183035  // +64
+    .word   1075183035  // +64   - M_PI_2
     .word   -373577867  // +68
-    .word   1072243195  // +72
+    .word   1072243195  // +72  angle component
     .word   1413754136  // +76
-.L79:
+.CHECK_START_OF_LINE:
     cmn r6, #1
     moveq   r7, r1
     moveq   r6, r4
@@ -990,16 +993,16 @@ find_lines:
     moveq   fp, r4
     strne   r1, [sp, #44]
     movne   fp, r4
-    b   .L38
-.L24:
+    b   .CHECK_HORIZONTALY_CHECK_ITERATION
+.HORIZONTAL_VERTICAL_CHECK:
     cmp ip, r9
     movlt   r4, ip
     movge   r4, r9
     cmp r4, r5
     mvnle   r7, #0
-    ble .L26
+    ble .CHECK_ITER_DIST
     mvn r7, #0
-.L34:
+.CHECK_VERTICALLY:
     fltd    f0, r5
     mnfd    f0, f0
     mufd    f0, f5, f0
@@ -1010,14 +1013,14 @@ find_lines:
     movgt   r3, #0
     movle   r3, #1
     orrs    r3, r3, r1, lsr #31
-    bne .L28
+    bne .NEW_ITER_VERT
     ldr r2, [sp, #84]
     ldr r3, [r2, r1, asl #2]
     ldrb    r2, [r3, r5]    @ zero_extendqisi2
     cmp r2, WHITE
-    beq .L80
+    beq .ADD_LINE_BEGIN_VERTICALLY
     cmn r7, #1
-    beq .L28
+    beq .NEW_ITER_VERT
     ldr r1, [sp, #44]
     rsb r3, r1, r7
     cmp r3, #0
@@ -1033,30 +1036,30 @@ find_lines:
     stfned  f1, [sp, #-8]!
     ldmnefd sp!, {r0, r1}
     blne    sqrt
-.L31:
+    // Add line vertivally
     ldr r2, [sp, #FRAME+88]
     cmp r2, #0
     fltd    f1, r2
     ldfltd  f2, .L_CONSTANTS+48
     adfltd  f1, f1, f2
     cmfe    f1, f0
-    bpl .L65
+    bpl .DO_NOT_ADD_LINE_VERTICALLY
     mov r1, r7
     ldr r0, [sp, #88]
     mov r2, r6
     ldr r3, [sp, #44]
     str fp, [sp, #0]
     bl  add_line
-.L65:
+.DO_NOT_ADD_LINE_VERTICALLY:
     mvn r7, #0
-.L28:
+.NEW_ITER_VERT:
     add r5, r5, #1
     cmp r5, r4
-    blt .L34
+    blt .CHECK_VERTICALLY
     cmn r7, #1
-    bne .L71
-    b   .L26
-.L80:
+    bne .ITERATION_DISTANCE
+    b   .CHECK_ITER_DIST
+.ADD_LINE_BEGIN_VERTICALLY:
     cmn r7, #1
     moveq   r6, r1
     moveq   r7, r5
@@ -1064,12 +1067,12 @@ find_lines:
     moveq   fp, r6
     movne   fp, r1
     strne   r5, [sp, #44]
-    b   .L28
-.L78:
+    b   .NEW_ITER_VERT
+.NOT_NEW:
     bic r4, r0, r0, asr #31
-    b   .L20
-.L15:
-    ldfd    f0, [sp, #32] // cos6
+    b   .NEXT_ITER
+.FINISH_DISTANCE_ITERATION:
+    ldfd    f0, [sp, #32]
     ldfd    f2, [sp, #4]
     dvfd    f4, f0, f5
     dvfd    f1, f2, f5
@@ -1081,19 +1084,19 @@ find_lines:
     adfd    f0, f0, f4
     fixz    r2, f0
     bic r5, r1, r1, asr #31
-    b   .L14
-.L63:
+    b   .DIST_3
+.COUNT_MAX_DIST_ANGLE_LESS_THAN_PI:
     ldfd    f0, .L_CONSTANTS+56
     sufd    f1, f0, f1
     stfd    f1, [sp, #-8]!
     ldmfd   sp!, {r0, r1}
     bl  cos
-    ldfd    f2, [sp, #24] // cos 2
+    ldfd    f2, [sp, #24] // angle
     ldfd    f1, .L_CONSTANTS+64
     cmfe    f2, f1
     fltd    f2, r9
-    b   .L64
-.L76:
+    b   .COUNT_DISTANCE_FINISH
+.COUNT_MAX_DIST_ANGLE_LESS_THAN_PI_2:
     fltd    f2, sl
     fltd    f0, r9
     stfd    f2, [sp, #-8]!
@@ -1107,25 +1110,40 @@ find_lines:
     ldmfd   sp!, {r0, r1}
     bl  cos
     ldfd    f1, .L_CONSTANTS+72
-    ldfd    f2, [sp, #24]
+    ldfd    f2, [sp, #24]  // angle
     cmfe    f2, f1
     mufd    f4, f4, f0
     movlt   r1, #0
     movge   r1, #1
-    stfd    f4, [sp, #40]
-    str r1, [sp, #20]
+    stfd    f4, [sp, #40]  // max_distance
+    str r1, [sp, #20] // distance
     mvfd    f0, f4
-    b   .L9
-.L74:
+    b   .CHECK_EXTREMA
+.SEARCH_DONE:
     /**
      * Phase 4 finished.
      */
 
     // Free temporary images
-    // TODO: tmp1 tmp2
-    // Free gaussian kernel
-    // TODO: gaussian
-    // TODO: Free sobel masks
+    ldr r0, [sp, #FRAME + 100]
+    mov r0, r0, asl #1 // *2
+    add r0, #1 // +1
+    mov r1, r0
+    ldr r0, [sp, #76]
+    bl free_kernel
+    // gaussian freed
+    ldr r0, [sp, #72]
+    mov r1, SOBEL_SIZE
+    bl free_kernel
+    ldr r0, [sp, #68]
+    mov r1, SOBEL_SIZE
+    bl free_kernel
+    // sobels freed
+    ldr r0, [sp, #84]
+    ldr r1, [sp, #92]
+    bl free_raw
+    // tmp freed
+
 .EXIT:
     epilogue
 
