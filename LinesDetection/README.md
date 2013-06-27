@@ -30,7 +30,6 @@ Cross-compilation could not work in this Makefile version.
 Testing:
 ---------
 
- * Just run `$ make test`,
  * Tests are in `tests` directory.
 
 Input:
@@ -41,6 +40,7 @@ Only monochromatic image in Netpbm format, [wiki](http://en.wikipedia.org/wiki/N
 Output:
 --------
 
+Default output will be placed on stdout.
 Text file with pairs of points (line_begin, line_end).
 Example, two lines, from (0,2) to (4,10), and from (32, 42) to (42, 44)
 
@@ -49,5 +49,8 @@ Example, two lines, from (0,2) to (4,10), and from (32, 42) to (42, 44)
 
 Can return monochromatic image in Netpbm format,
 [wiki](http://en.wikipedia.org/wiki/Netpbm_format "PGM").
+
+
+
 Run `./linedetect --help` for more informations.
 
